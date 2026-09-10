@@ -20,15 +20,15 @@ The student tested the original demo with a mouse and touchscreen. Recruiter sel
 
 The revision prevents the swipe handler from capturing presses on buttons. It also ignores vertical/cancelled swipes and prevents repeated decisions during transitions. Resume selection, preview, removal, file-type checks, and a 10 MB limit were added. Feedback notes display as text, so typed markup does not become HTML.
 
-Automated Edge checks passed for mouse clicks and emulated touch taps: both arrows, cancelling and saving feedback, review completion, image preview, PDF selection and preview-frame creation, removal, invalid file types, and disabled applicant review buttons. No browser JavaScript errors occurred. These checks do not verify physical touchscreen hardware or PDF rendering across all browsers. The student still needs to retest the revised version, including an actual PDF and image.
+Automated Edge checks passed for mouse clicks and emulated touch taps: both arrows, cancelling and saving feedback, review completion, image preview, PDF selection and preview-frame creation, removal, invalid file types, and disabled applicant review buttons. No browser JavaScript errors occurred. These checks do not verify physical touchscreen hardware or PDF rendering across all browsers. After receiving instructions to retest the revised arrows and resume controls, the student reported, "everything is perfect!!!" No further problems were reported in that retest.
 
 Optional developer check: with Node.js, Playwright, and Microsoft Edge available, run `node test-demo.cjs`.
 
-## Reflection draft — review after retesting
+## Reflection
 
 I wanted recruiters to use the arrows on a candidate's card to indicate a job match or explain why the candidate was not a fit. In my first test, choosing the recruiter role worked with both my mouse and my computer's touchscreen. However, the candidate arrows only worked with touch, which did not match my intention. I asked for a revision so both input methods would work, and I also requested PDF and image options for adding a resume.
 
-AI helped identify the swipe handler as the likely cause of the mouse problem, revise the code, and run automated mouse and touch-emulation checks. I supplied the real-device testing observations and decided which changes mattered to the experience. The revised demo also lets someone select and preview a resume locally. I still need to try the updated arrows and resume controls on my own computer before confirming that the changes solve my problem. Actual email delivery, permanent resume storage, and matching based on uploaded documents remain outside this prototype.
+AI helped identify the swipe handler as the likely cause of the mouse problem, revise the code, and run automated mouse and touch-emulation checks. I supplied the real-device testing observations and decided which changes mattered to the experience. The revised demo also lets someone select and preview a resume locally. After trying the revised version, I reported that everything worked as I wanted, so the changes brought the experience closer to my original intention. Actual email delivery, permanent resume storage, and matching based on uploaded documents remain outside this prototype, and behavior on other devices and browsers remains uncertain.
 
 ## Run locally
 
