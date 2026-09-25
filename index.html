@@ -41,6 +41,143 @@
       outline-offset: 3px;
     }
 
+    body.intro-active { overflow: hidden; overscroll-behavior: none; }
+    #siteShell.intro-revealed { animation: dashboard-arrives .72s cubic-bezier(.2,.75,.25,1) both; }
+
+    .intro-overlay {
+      position: fixed;
+      z-index: 100;
+      inset: 0;
+      display: grid;
+      min-height: 100vh;
+      min-height: 100dvh;
+      place-items: center;
+      padding: 32px;
+      overflow: hidden;
+      isolation: isolate;
+      color: #fff;
+      background:
+        radial-gradient(circle at 76% 23%, rgba(124,92,252,.5), transparent 25%),
+        radial-gradient(circle at 18% 84%, rgba(255,255,255,.09), transparent 30%),
+        linear-gradient(125deg, #141414 0%, #211b2b 51%, #171717 100%);
+      opacity: 1;
+      transform: translateX(0);
+      transition: opacity .68s ease, transform .8s cubic-bezier(.7,0,.25,1);
+    }
+    .intro-overlay::before {
+      position: absolute;
+      z-index: -1;
+      inset: 0;
+      content: "";
+      opacity: .22;
+      background-image: radial-gradient(rgba(255,255,255,.4) .55px, transparent .75px);
+      background-size: 5px 5px;
+      mask-image: linear-gradient(to bottom, rgba(0,0,0,.7), transparent 75%);
+    }
+    .intro-overlay.is-ready .intro-kicker { animation: intro-rise .75s .1s cubic-bezier(.2,.75,.25,1) both; }
+    .intro-overlay.is-ready .intro-title { animation: intro-word 1.12s .22s cubic-bezier(.16,1,.3,1) both; }
+    .intro-overlay.is-ready .intro-copy { animation: intro-rise .75s .72s cubic-bezier(.2,.75,.25,1) both; }
+    .intro-overlay.is-ready .intro-enter { animation: intro-rise .7s 1s cubic-bezier(.2,.75,.25,1) both; }
+    .intro-overlay.is-leaving { pointer-events: none; opacity: 0; transform: translateX(-5vw); }
+    .intro-glow {
+      position: absolute;
+      z-index: -1;
+      top: 50%;
+      left: 50%;
+      width: min(76vw, 850px);
+      aspect-ratio: 1;
+      border: 1px solid rgba(255,255,255,.13);
+      border-radius: 50%;
+      box-shadow: 0 0 0 46px rgba(255,255,255,.035), 0 0 0 130px rgba(255,255,255,.025);
+      transform: translate(-50%, -46%);
+      animation: intro-drift 12s ease-in-out infinite alternate;
+    }
+    .intro-glow::after {
+      position: absolute;
+      top: 12%;
+      right: 8%;
+      width: 13%;
+      aspect-ratio: 1;
+      content: "";
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 80px 26px rgba(124,92,252,.65);
+      filter: blur(3px);
+    }
+    .intro-content {
+      width: min(860px, 100%);
+      text-align: center;
+    }
+    .intro-kicker,
+    .intro-copy,
+    .intro-enter { opacity: 1; transform: none; }
+    body.intro-active .intro-kicker,
+    body.intro-active .intro-copy,
+    body.intro-active .intro-enter { opacity: 0; transform: translateY(18px); }
+    .intro-kicker {
+      margin: 0 0 20px;
+      color: #D9D1FF;
+      font-size: .72rem;
+      font-weight: 850;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+    }
+    .intro-title {
+      margin: 0;
+      color: #fff;
+      font-family: var(--serif);
+      font-size: clamp(5rem, 16vw, 10.5rem);
+      font-weight: 600;
+      line-height: .8;
+      letter-spacing: -.1em;
+      text-wrap: balance;
+      opacity: 1;
+      transform: none;
+      filter: none;
+    }
+    body.intro-active .intro-title { opacity: 0; transform: translateY(30px); filter: blur(8px); }
+    .intro-copy {
+      max-width: 500px;
+      margin: 41px auto 28px;
+      color: rgba(255,255,255,.78);
+      font-size: clamp(1rem, 2vw, 1.16rem);
+      line-height: 1.65;
+    }
+    .intro-enter {
+      display: inline-flex;
+      gap: 13px;
+      align-items: center;
+      min-height: 48px;
+      padding: 12px 18px 12px 21px;
+      color: #fff;
+      background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.22);
+      border-radius: 999px;
+      box-shadow: 0 12px 32px rgba(0,0,0,.16);
+      font-size: .9rem;
+      font-weight: 780;
+      backdrop-filter: blur(14px);
+    }
+    .intro-enter:hover { background: #fff; color: var(--ink); transform: translateY(-2px); }
+    .intro-enter .arrow { font-size: 1.2rem; line-height: 1; transition: transform .2s ease; }
+    .intro-enter:hover .arrow { transform: translateX(3px); }
+    @keyframes intro-word {
+      from { opacity: 0; letter-spacing: .12em; transform: translateY(30px); filter: blur(8px); }
+      to { opacity: 1; letter-spacing: -.1em; transform: translateY(0); filter: blur(0); }
+    }
+    @keyframes intro-rise {
+      from { opacity: 0; transform: translateY(18px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes intro-drift {
+      from { transform: translate(-52%, -48%) scale(.96); }
+      to { transform: translate(-47%, -43%) scale(1.05); }
+    }
+    @keyframes dashboard-arrives {
+      from { opacity: .58; transform: translateX(34px) scale(.992); }
+      to { opacity: 1; transform: translateX(0) scale(1); }
+    }
+
     .nav {
       display: flex;
       align-items: center;
@@ -653,6 +790,17 @@
     }
     .toast.show { transform: translateY(0); }
 
+    @media (prefers-reduced-motion: reduce) {
+      #siteShell.intro-revealed,
+      .intro-overlay,
+      .intro-overlay *,
+      .intro-glow { animation-duration: .01ms !important; animation-delay: 0ms !important; transition-duration: .01ms !important; }
+      .intro-title,
+      .intro-kicker,
+      .intro-copy,
+      .intro-enter { opacity: 1; transform: none; filter: none; }
+    }
+
     @media (max-width: 1080px) {
       .candidate-layout { grid-template-columns: minmax(0, 1.1fr) minmax(280px, .9fr); }
       .reference-guide { grid-column: 1 / -1; }
@@ -684,6 +832,19 @@
   </style>
 </head>
 <body>
+  <section class="intro-overlay" id="introOverlay" role="dialog" aria-modal="true" aria-labelledby="introTitle" aria-describedby="introCopy">
+    <div class="intro-glow" aria-hidden="true"></div>
+    <div class="intro-content">
+      <p class="intro-kicker">A more human way forward</p>
+      <h1 class="intro-title" id="introTitle">Forward</h1>
+      <p class="intro-copy" id="introCopy">Move beyond the résumé black hole. Find the person behind the profile.</p>
+      <button class="intro-enter" id="enterExperience" type="button">
+        Explore the experience <span class="arrow" aria-hidden="true">→</span>
+      </button>
+    </div>
+  </section>
+
+  <div id="siteShell">
   <nav class="nav">
     <div class="brand">for<b>ward</b></div>
     <div class="role-status">
@@ -962,7 +1123,7 @@
     </section>
   </main>
 
-  <div class="overlay" id="roleModal" role="dialog" aria-modal="true" aria-labelledby="roleModalTitle">
+  <div class="overlay" id="roleModal" hidden role="dialog" aria-modal="true" aria-labelledby="roleModalTitle">
     <article class="dialog">
       <p class="eyebrow">Welcome to Forward</p>
       <h2 id="roleModalTitle">How are you joining today?</h2>
@@ -1151,6 +1312,7 @@
   </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </div>
 
   <script>
     const publicApplicants = [
@@ -1237,6 +1399,88 @@
     let connections = {};
     let activeConversationId = null;
     let resumeUrl = null;
+    const introStorageKey = "forward-opener-seen-v1";
+    let introExitStarted = false;
+    let introExitFinished = false;
+
+    function prefersReducedMotion() {
+      return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    }
+
+    function hasSeenIntro() {
+      try {
+        return localStorage.getItem(introStorageKey) === "true";
+      } catch {
+        return false;
+      }
+    }
+
+    function rememberIntro() {
+      try {
+        localStorage.setItem(introStorageKey, "true");
+      } catch {
+        // Storage may be unavailable in a privacy-focused browser mode.
+      }
+    }
+
+    function showRoleChooser() {
+      $("roleModal").hidden = false;
+      window.setTimeout(() => document.querySelector("#roleModal .role-button")?.focus(), 0);
+    }
+
+    function finishIntro(immediate = false) {
+      const intro = $("introOverlay");
+      const shell = $("siteShell");
+      if (!intro || intro.hidden || introExitStarted) return;
+      introExitStarted = true;
+      rememberIntro();
+
+      const revealExperience = () => {
+        if (introExitFinished) return;
+        introExitFinished = true;
+        intro.hidden = true;
+        intro.classList.remove("is-leaving");
+        document.body.classList.remove("intro-active");
+        shell.inert = false;
+        shell.removeAttribute("aria-hidden");
+        shell.classList.add("intro-revealed");
+        showRoleChooser();
+        window.setTimeout(() => shell.classList.remove("intro-revealed"), 800);
+      };
+
+      if (immediate || prefersReducedMotion()) {
+        revealExperience();
+        return;
+      }
+
+      intro.addEventListener("transitionend", event => {
+        if (event.target === intro && event.propertyName === "opacity") revealExperience();
+      }, { once: true });
+      intro.classList.add("is-leaving");
+      window.setTimeout(revealExperience, 900);
+    }
+
+    function initializeIntro() {
+      const intro = $("introOverlay");
+      const shell = $("siteShell");
+      if (!intro || !shell) return;
+
+      if (hasSeenIntro()) {
+        intro.hidden = true;
+        shell.inert = false;
+        shell.removeAttribute("aria-hidden");
+        showRoleChooser();
+        return;
+      }
+
+      shell.inert = true;
+      shell.setAttribute("aria-hidden", "true");
+      document.body.classList.add("intro-active");
+      window.requestAnimationFrame(() => intro.classList.add("is-ready"));
+      window.setTimeout(() => {
+        if (!intro.hidden && !introExitStarted) $("enterExperience")?.focus();
+      }, 1150);
+    }
 
     function showToast(message) {
       $("toast").textContent = message;
@@ -1785,6 +2029,14 @@
     });
     reviewCard.addEventListener("pointercancel", () => { swipeStart = null; });
 
+    $("enterExperience").addEventListener("click", () => finishIntro());
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape" && !$("introOverlay").hidden) {
+        event.preventDefault();
+        finishIntro();
+      }
+    });
+
     window.addEventListener("beforeunload", () => {
       if (resumeUrl) URL.revokeObjectURL(resumeUrl);
     });
@@ -1793,6 +2045,7 @@
     renderApplicantCard();
     renderYesList();
     renderFeedback();
+    initializeIntro();
   </script>
 </body>
 </html>

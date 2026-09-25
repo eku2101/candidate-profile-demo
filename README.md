@@ -4,6 +4,7 @@ Forward is a browser-only prototype for two audiences: applicants building a pub
 
 ## Included interactions
 
+- **Cinematic first-visit opener:** a full-screen Forward introduction reveals the product story before the role picker. The visitor chooses **Explore the experience** (or presses Escape) to transition into the app; after that, a small local browser flag skips the opener on return visits. It respects reduced-motion preferences and stores no profile or matching information.
 - **Applicant private intake:** before accessing the profile builder, applicants set their work style, workload rhythm, and ideal company environment. Those values are kept out of the public profile and used only by the local matching model.
 - **Applicant workspace:** choose **Upload document** to preview a local PDF/image or **Build profile** to update a live public card with a name, role, location, skills, and introduction. It intentionally has no default-photo bank or profile-picture upload control.
 - **Mission and culture profile:** candidates can publicly share why they do their work, their professional values, how they support team well-being and colleagues, and a community contribution they are proud of. These people-centered story sections appear in the live preview, swipe card, and full public profile.
