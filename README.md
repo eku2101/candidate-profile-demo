@@ -1,5 +1,7 @@
 # Forward — Talent Connections Demo
 
+[Visit the live Forward website](https://eku2101.github.io/candidate-profile-demo/)
+
 Forward is a browser-only prototype for two audiences: applicants building a public portfolio profile and hiring teams reviewing a ranked applicant pipeline. The startup role picker keeps the experiences separate, then starts each role with its own private intake questionnaire.
 
 ## Included interactions
