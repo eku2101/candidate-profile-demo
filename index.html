@@ -386,7 +386,8 @@
     }
     .method-pane input,
     .method-pane textarea,
-    .question-grid select {
+    .question-grid select,
+    .question-grid input {
       width: 100%;
       padding: 12px 13px;
       color: var(--ink);
@@ -396,7 +397,8 @@
     }
     .method-pane input:hover,
     .method-pane textarea:hover,
-    .question-grid select:hover { border-color: var(--accent); }
+    .question-grid select:hover,
+    .question-grid input:hover { border-color: var(--accent); }
     .method-pane textarea { min-height: 96px; resize: vertical; }
     .help {
       margin: 9px 0 0;
@@ -438,6 +440,7 @@
     .profile-top { display: flex; gap: 15px; align-items: center; }
     .initial-avatar {
       display: grid;
+      overflow: hidden;
       flex: 0 0 auto;
       width: 70px;
       height: 70px;
@@ -448,6 +451,55 @@
       font-size: 1.2rem;
       font-weight: 850;
     }
+    .initial-avatar img,
+    .candidate-avatar img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .initial-avatar.has-image,
+    .candidate-avatar.has-image { background: var(--hover); }
+    .initial-avatar.has-image > span,
+    .candidate-avatar.has-image > span { display: none; }
+    .profile-media {
+      grid-column: 1 / -1;
+      padding: 18px;
+      margin: 3px 0 0;
+      background: var(--accent-wash);
+      border: 1px solid rgba(124,92,252,.2);
+      border-radius: 14px;
+    }
+    .profile-media legend { padding: 0 5px; color: var(--accent-deep); font-size: .83rem; font-weight: 830; }
+    .profile-media .help { margin: 3px 0 13px; }
+    .media-upload-row { display: flex; gap: 11px; align-items: center; flex-wrap: wrap; }
+    .media-upload-button {
+      display: inline-flex;
+      min-height: 42px;
+      align-items: center;
+      padding: 10px 13px;
+      color: #fff;
+      background: var(--accent);
+      border-radius: 10px;
+      font-size: .84rem;
+      font-weight: 780;
+      cursor: pointer;
+    }
+    .media-upload-button:hover { background: var(--accent-deep); box-shadow: 0 8px 18px rgba(124,92,252,.22); }
+    .media-status { margin: 0; color: var(--accent-deep); font-size: .8rem; font-weight: 700; }
+    .profile-attachment {
+      display: none;
+      gap: 8px;
+      align-items: center;
+      margin-top: 17px;
+      padding: 10px 12px;
+      color: var(--ink-soft);
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      font-size: .79rem;
+    }
+    .profile-attachment.show { display: flex; }
     .preview-card h3, .review-card h3 { margin: 0; font-size: 1.32rem; font-weight: 600; letter-spacing: -.04em; }
     .role { margin: 5px 0; color: var(--ink-soft); font-size: .92rem; }
     .location { color: var(--muted); font-size: .8rem; }
@@ -525,6 +577,106 @@
     }
     .inbox-card { margin-top: 28px; }
     .inbox-action { width: 100%; margin-top: 18px; }
+
+    .launch-card {
+      display: flex;
+      gap: 24px;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 30px;
+      padding: 30px 32px;
+      color: #fff;
+      overflow: hidden;
+      border: 0;
+      background: linear-gradient(115deg, #1A1A1A, #2C2139 62%, #6246DC 170%);
+    }
+    .launch-card h3 { margin: 7px 0; font-size: clamp(1.5rem, 2.5vw, 2rem); font-weight: 600; letter-spacing: -.05em; }
+    .launch-card p:not(.eyebrow) { max-width: 650px; margin: 0; color: rgba(255,255,255,.76); line-height: 1.55; }
+    .launch-card .eyebrow { color: #D9D1FF; }
+    .launch-button { min-width: 150px; color: var(--ink); background: #fff; }
+    .launch-button:hover { color: #fff; background: var(--accent); }
+
+    .applicant-hub-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(300px, .85fr);
+      gap: 28px;
+      align-items: start;
+    }
+    .live-profile-card,
+    .manager-card,
+    .feedback-card,
+    .community-card,
+    .post-composer,
+    .project-feed { padding: 30px; }
+    .live-profile-card { min-height: 390px; }
+    .live-profile-card h3,
+    .manager-card h3,
+    .feedback-card h3,
+    .community-card h3,
+    .post-composer h3,
+    .project-feed h3 { margin: 7px 0; font-size: 1.38rem; font-weight: 600; letter-spacing: -.045em; }
+    .live-profile-card > p,
+    .manager-card > p,
+    .feedback-card > p,
+    .community-card > p,
+    .post-composer > p,
+    .project-feed > p { color: var(--ink-soft); line-height: 1.55; }
+    .live-profile-card .initial-avatar { width: 82px; height: 82px; border-radius: 24px; font-size: 1.35rem; }
+    .live-profile-card .profile-top { margin: 20px 0 0; }
+    .activity-stack { display: grid; gap: 20px; }
+    .manager-list,
+    .applicant-feedback-list { display: grid; gap: 10px; margin-top: 18px; }
+    .manager-item,
+    .feedback-item {
+      padding: 13px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+    .manager-item strong,
+    .feedback-item strong { display: block; color: var(--ink); font-size: .86rem; }
+    .manager-item span,
+    .feedback-item span { display: block; margin-top: 4px; color: var(--ink-soft); font-size: .79rem; line-height: 1.45; }
+    .manager-item small { display: block; margin-top: 7px; color: var(--accent-deep); font-size: .72rem; font-weight: 780; }
+    .local-note { margin: 14px 0 0; color: var(--muted); font-size: .76rem; line-height: 1.45; }
+    .hub-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 24px; }
+    .community-card { margin-top: 28px; }
+    .community-card .button { margin-top: 13px; }
+
+    .community-layout {
+      display: grid;
+      grid-template-columns: minmax(290px, .78fr) minmax(0, 1.22fr);
+      gap: 28px;
+      align-items: start;
+    }
+    .post-composer form { display: grid; gap: 12px; margin-top: 19px; }
+    .post-composer label { color: var(--ink); font-size: .82rem; font-weight: 760; }
+    .post-composer input:not([type="file"]),
+    .post-composer textarea {
+      width: 100%;
+      margin-top: 6px;
+      padding: 11px 12px;
+      color: var(--ink);
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+    }
+    .post-composer textarea { min-height: 126px; resize: vertical; }
+    .post-composer input:hover,
+    .post-composer textarea:hover { border-color: var(--accent); }
+    .post-composer .media-upload-row { margin-top: 0; }
+    .post-status { min-height: 1.2em; margin: 0; color: var(--accent-deep); font-size: .78rem; font-weight: 700; }
+    .project-feed-list { display: grid; gap: 16px; margin-top: 18px; }
+    .project-post { overflow: hidden; background: var(--paper); border: 1px solid var(--line); border-radius: 16px; }
+    .project-post-copy { padding: 18px; }
+    .project-post h4 { margin: 5px 0 9px; font-family: var(--serif); font-size: 1.2rem; font-weight: 600; }
+    .project-post p { margin: 0; color: var(--ink-soft); font-size: .89rem; line-height: 1.55; }
+    .project-post img { display: block; width: 100%; max-height: 280px; object-fit: cover; }
+    .post-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+    .award-chip,
+    .document-chip { display: inline-flex; align-items: center; padding: 6px 8px; border-radius: 999px; font-size: .74rem; font-weight: 760; }
+    .award-chip { color: #704B10; background: #FFF2CA; }
+    .document-chip { color: var(--accent-deep); background: var(--accent-wash); }
 
     .reference-guide { background: #fff; }
     .guide-note { color: var(--ink-soft) !important; }
@@ -749,6 +901,8 @@
     .submit { padding: 11px 15px; color: #fff; background: var(--accent); border-radius: 9px; font-weight: 780; }
     .submit:hover { background: var(--accent-deep); }
     .feedback-dialog label { display: block; margin: 18px 0 7px; color: var(--ink); font-size: .85rem; font-weight: 760; }
+    .feedback-dialog .share-feedback { display: flex; gap: 9px; align-items: flex-start; margin: 17px 0 0; color: var(--ink-soft); font-size: .8rem; font-weight: 650; line-height: 1.45; }
+    .feedback-dialog .share-feedback input { width: auto; margin-top: 2px; accent-color: var(--accent); }
     .feedback-dialog select, .feedback-dialog textarea, .chat-compose select, .chat-compose textarea {
       width: 100%;
       padding: 11px 12px;
@@ -810,7 +964,7 @@
       .hero { width: calc(100% - 32px); min-height: 260px; padding: 42px 30px; border-radius: 24px; }
       .workspace { margin: 38px auto 70px; padding: 0 20px; }
       .workspace-head, .private-summary, .role-brief { align-items: flex-start; flex-direction: column; }
-      .candidate-layout, .hiring-grid, .lists { grid-template-columns: 1fr; }
+      .candidate-layout, .hiring-grid, .lists, .applicant-hub-grid, .community-layout { grid-template-columns: 1fr; }
       .reference-guide { grid-column: auto; }
       .match-badge { display: none; }
       .review-story { grid-template-columns: 1fr; }
@@ -820,7 +974,7 @@
       .role-status span { display: none; }
       .hero { width: calc(100% - 24px); padding: 37px 24px; border-radius: 20px; }
       .workspace { padding: 0 16px; }
-      .build-card, .preview-card, .inbox-card, .reference-guide, .review-card, .match-panel, .list-card { padding: 23px; }
+      .build-card, .preview-card, .inbox-card, .reference-guide, .review-card, .match-panel, .list-card, .live-profile-card, .manager-card, .feedback-card, .community-card, .post-composer, .project-feed { padding: 23px; }
       .dialog { padding: 30px 22px; border-radius: 20px; }
       .roles, .question-grid, .form-grid { grid-template-columns: 1fr; }
       .form-grid .full, .question-grid .full { grid-column: auto; }
@@ -828,6 +982,9 @@
       .actions { align-items: flex-start; flex-wrap: wrap; }
       .hint { display: none; }
       .detail-button { margin-left: auto; }
+      .launch-card { align-items: flex-start; flex-direction: column; padding: 27px 23px; }
+      .launch-button { width: 100%; }
+      .media-upload-row { align-items: flex-start; flex-direction: column; }
     }
   </style>
 </head>
@@ -882,7 +1039,7 @@
         <article class="card build-card">
           <p class="eyebrow">Public profile</p>
           <h3>Tell the story teams should see.</h3>
-          <p>Your public profile uses only the information you choose to share. There are no stock identities or profile-photo prompts in this workspace.</p>
+          <p>Your public profile uses only the information you choose to share. There are no stock identities—add your own image or supporting document when it helps tell your story.</p>
 
           <div class="method-tabs" role="tablist" aria-label="Profile input method">
             <button class="method-tab active" data-method="upload" role="tab" aria-selected="true" type="button">Upload document</button>
@@ -919,6 +1076,16 @@
                 <label for="profileSummaryInput">Short introduction</label>
                 <textarea id="profileSummaryInput" placeholder="Tell teams what you do best.">Designing clear, inclusive experiences that turn customer insight into useful products.</textarea>
               </div>
+              <fieldset class="profile-media">
+                <legend>Add your media</legend>
+                <p class="help">Choose an image, JPG, PNG, WebP, or PDF. Images become your profile picture automatically; PDFs are added as a supporting document instead.</p>
+                <div class="media-upload-row">
+                  <label class="media-upload-button" for="profileMediaFile">Add image, PDF, JPG, or more</label>
+                  <input id="profileMediaFile" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp" hidden />
+                  <button class="button secondary" id="removeProfileImage" type="button" hidden>Remove image</button>
+                  <p class="media-status" id="profileMediaStatus" role="status">No profile image or supporting document selected.</p>
+                </div>
+              </fieldset>
               <fieldset class="story-fields">
                 <legend>Mission &amp; culture spotlight</legend>
                 <p class="help">These are public, candidate-authored stories. Use concrete examples of the care, collaboration, and community you bring to work.</p>
@@ -953,7 +1120,10 @@
           <article class="card preview-card">
             <p class="eyebrow">Live public preview</p>
             <div class="profile-top">
-              <div class="initial-avatar" id="previewInitials" aria-hidden="true">AJ</div>
+              <div class="initial-avatar" id="previewAvatar">
+                <img id="previewProfileImage" alt="" hidden />
+                <span id="previewInitials" aria-hidden="true">AJ</span>
+              </div>
               <div>
                 <h3 id="previewName">Avery Johnson</h3>
                 <p class="role" id="previewRole">Product Designer</p>
@@ -962,6 +1132,9 @@
             </div>
             <p class="summary" id="previewSummary">Designing clear, inclusive experiences that turn customer insight into useful products.</p>
             <div class="tags" id="previewTags"></div>
+            <div class="profile-attachment" id="previewAttachment" hidden>
+              <span aria-hidden="true">▣</span><span id="previewAttachmentText"></span>
+            </div>
             <div class="profile-story">
               <section class="story-panel">
                 <p class="eyebrow">Why I do this work</p>
@@ -1034,6 +1207,128 @@
           </div>
         </article>
       </div>
+
+      <article class="card launch-card">
+        <div>
+          <p class="eyebrow">Ready when you are</p>
+          <h3>Launch your Forward profile.</h3>
+          <p>Your public story, selected image or document, and future project posts become visible in this browser-only matching demo after you launch.</p>
+        </div>
+        <button class="button launch-button" id="launchProfile" type="button">Launch profile →</button>
+      </article>
+    </section>
+  </main>
+
+  <main class="workspace" id="applicantLivePage" hidden>
+    <section>
+      <div class="workspace-head">
+        <div>
+          <p class="eyebrow">Your public presence</p>
+          <h2 id="launchPageTitle" tabindex="-1">Your Forward profile is live.</h2>
+        </div>
+        <button class="button secondary" id="backToBuilder" type="button">← Edit profile</button>
+      </div>
+
+      <article class="card private-summary">
+        <div>
+          <div class="private-seal">✦ Launched in this demo</div>
+          <h3>Your public story is ready to be discovered.</h3>
+          <p>Manager activity, connections, and feedback below are local demo signals. A real version would require consent, authentication, and secure storage.</p>
+        </div>
+        <button class="button secondary" id="openCommunityPage" type="button">Community &amp; projects →</button>
+      </article>
+
+      <div class="applicant-hub-grid">
+        <article class="card live-profile-card">
+          <p class="eyebrow">Live profile</p>
+          <div class="profile-top">
+            <div class="initial-avatar" id="liveAvatar">
+              <img id="liveProfileImage" alt="" hidden />
+              <span id="liveInitials" aria-hidden="true">AJ</span>
+            </div>
+            <div>
+              <h3 id="liveName">Avery Johnson</h3>
+              <p class="role" id="liveRole">Product Designer</p>
+              <span class="location" id="liveLocation">Philadelphia, PA</span>
+            </div>
+          </div>
+          <p class="summary" id="liveSummary">Your public story appears here for teams in the local demo.</p>
+          <div class="tags" id="liveTags"></div>
+          <div class="profile-attachment" id="liveAttachment" hidden>
+            <span aria-hidden="true">▣</span><span id="liveAttachmentText"></span>
+          </div>
+          <div class="hub-actions">
+            <button class="button primary" id="openApplicantConversation" type="button">Open feedback channel</button>
+            <button class="button secondary" id="openCommunityFromProfile" type="button">Share a project update</button>
+          </div>
+        </article>
+
+        <div class="activity-stack">
+          <article class="card manager-card">
+            <p class="eyebrow">Manager activity</p>
+            <h3>Who is looking at your work</h3>
+            <p>Only opt-in, local demo activity appears here.</p>
+            <div class="manager-list" id="managerActivityList"></div>
+            <p class="local-note">This prototype never tracks real visitors. A live product would show verified manager identities only with their consent.</p>
+          </article>
+
+          <article class="card feedback-card">
+            <p class="eyebrow">Feedback channel</p>
+            <h3>Notes shared with you</h3>
+            <p>Constructive feedback from a hiring team appears here only when they choose to share it.</p>
+            <div class="applicant-feedback-list" id="applicantFeedbackList"></div>
+          </article>
+        </div>
+      </div>
+
+      <article class="card community-card">
+        <p class="eyebrow">Community &amp; projects</p>
+        <h3>Let your work keep telling the story.</h3>
+        <p>Post project photos, case-study notes, community work, or awards on a separate, applicant-only page.</p>
+        <button class="button primary" id="openCommunityPageBottom" type="button">Open community &amp; projects →</button>
+      </article>
+    </section>
+  </main>
+
+  <main class="workspace" id="applicantCommunityPage" hidden>
+    <section>
+      <div class="workspace-head">
+        <div>
+          <p class="eyebrow">Community &amp; projects</p>
+          <h2 id="communityPageTitle" tabindex="-1">Share the work behind your profile.</h2>
+        </div>
+        <button class="button secondary" id="backToLivePage" type="button">← Back to profile activity</button>
+      </div>
+
+      <div class="community-layout">
+        <article class="card post-composer">
+          <p class="eyebrow">New project post</p>
+          <h3>Share a project, award, or impact story.</h3>
+          <p>Posts stay in this browser until a secure, live platform is connected.</p>
+          <form id="communityPostForm">
+            <label for="projectPostTitle">Title</label>
+            <input id="projectPostTitle" maxlength="100" required placeholder="e.g., Rebuilt a volunteer sign-up experience" />
+            <label for="projectPostStory">Project story or award details</label>
+            <textarea id="projectPostStory" maxlength="800" required placeholder="What did you make, who did it help, and what did you learn?"></textarea>
+            <label for="projectPostAward">Award or recognition (optional)</label>
+            <input id="projectPostAward" maxlength="120" placeholder="e.g., Community Impact Award · 2026" />
+            <div class="media-upload-row">
+              <label class="media-upload-button" for="projectPostMedia">Add project image or PDF</label>
+              <input id="projectPostMedia" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp" hidden />
+              <span class="help">Optional · 10 MB maximum</span>
+            </div>
+            <p class="post-status" id="projectPostStatus" role="status"></p>
+            <button class="button primary" type="submit">Publish local project post</button>
+          </form>
+        </article>
+
+        <article class="card project-feed">
+          <p class="eyebrow">Your project feed</p>
+          <h3>Work, impact, and recognition</h3>
+          <p>These posts are a preview of the community-facing profile a live product could securely publish.</p>
+          <div class="project-feed-list" id="projectFeedList"></div>
+        </article>
+      </div>
     </section>
   </main>
 
@@ -1059,7 +1354,10 @@
       <div class="hiring-grid">
         <article class="card review-card" id="reviewCard">
           <div class="profile-top">
-            <div class="candidate-avatar" id="appAvatar">AS</div>
+            <div class="candidate-avatar" id="appAvatar">
+              <img id="appProfileImage" alt="" hidden />
+              <span id="appInitials">AS</span>
+            </div>
             <div>
               <h3 id="appName">Alex Santos</h3>
               <p class="role" id="appRole">Product Designer</p>
@@ -1231,6 +1529,11 @@
                 <option value="remote" selected>Remote-first distributed team</option>
               </select>
             </div>
+            <div class="full">
+              <label for="hiringTeamName">Team or manager name</label>
+              <input id="hiringTeamName" value="Northstar hiring team" maxlength="80" placeholder="Shown only as local demo activity to applicants you view" />
+              <p class="help">Optional in this demo. It identifies the local activity signal only—it is not a matching input.</p>
+            </div>
           </div>
         </fieldset>
         <div class="dialog-actions">
@@ -1256,6 +1559,7 @@
       </select>
       <label for="feedbackNote">Optional constructive note</label>
       <textarea id="feedbackNote" placeholder="For example: Your design work is strong; B2B platform experience would help for this role."></textarea>
+      <label class="share-feedback"><input id="shareFeedbackWithApplicant" type="checkbox" checked /> Share this constructive note with the applicant in their feedback channel.</label>
       <div class="dialog-actions">
         <button class="cancel" id="cancelFeedback" type="button">Cancel</button>
         <button class="submit" id="saveFeedback" type="button">Save feedback &amp; continue</button>
@@ -1267,7 +1571,13 @@
     <article class="dialog">
       <button class="close" id="closeProfile" type="button" aria-label="Close public profile">×</button>
       <p class="eyebrow">Public applicant profile</p>
-      <h2 id="detailName">Alex Santos</h2>
+      <div class="profile-top">
+        <div class="candidate-avatar" id="detailAvatar">
+          <img id="detailProfileImage" alt="" hidden />
+          <span id="detailInitials">AS</span>
+        </div>
+        <h2 id="detailName">Alex Santos</h2>
+      </div>
       <p id="detailText"></p>
       <div class="tags" id="detailTags"></div>
       <div class="profile-story">
@@ -1399,6 +1709,12 @@
     let connections = {};
     let activeConversationId = null;
     let resumeUrl = null;
+    let applicantLaunched = false;
+    let activeApplicantPage = "builder";
+    let profileImageUrl = null;
+    let profileAttachmentName = "";
+    let projectPosts = [];
+    let managerViews = [];
     const introStorageKey = "forward-opener-seen-v1";
     let introExitStarted = false;
     let introExitFinished = false;
@@ -1496,12 +1812,41 @@
       return String(value || "").trim();
     }
 
+    function renderAvatar(containerId, imageId, initialsId, name, imageUrl) {
+      const container = $(containerId);
+      const image = $(imageId);
+      const initialsElement = $(initialsId);
+      if (!container || !image || !initialsElement) return;
+      initialsElement.textContent = initials(name);
+      if (imageUrl) {
+        image.src = imageUrl;
+        image.alt = "Profile photo of " + name;
+        image.hidden = false;
+        container.classList.add("has-image");
+      } else {
+        image.removeAttribute("src");
+        image.alt = "";
+        image.hidden = true;
+        container.classList.remove("has-image");
+      }
+    }
+
+    function renderAttachment(containerId, textId, filename) {
+      const container = $(containerId);
+      const text = $(textId);
+      if (!container || !text) return;
+      const hasAttachment = Boolean(filename);
+      container.hidden = !hasAttachment;
+      container.classList.toggle("show", hasAttachment);
+      text.textContent = hasAttachment ? "Supporting document: " + filename : "";
+    }
+
     function currentApplicant() {
       return rankedApplicants[currentIndex];
     }
 
     function getInteractiveApplicant() {
-      if (!applicantQuizComplete) return null;
+      if (!applicantQuizComplete || !applicantLaunched) return null;
       const name = safeText($("profileNameInput").value) || "Avery Johnson";
       const skills = $("profileSkillsInput").value.split(",").map(skill => safeText(skill)).filter(Boolean);
       const values = $("profileValuesInput").value.split(",").map(value => safeText(value)).filter(Boolean);
@@ -1517,7 +1862,10 @@
         values: values.length ? values : ["Care", "Clarity"],
         wellbeing: safeText($("profileWellbeingInput").value) || "Shares people-first habits that make collaboration more sustainable.",
         colleagueSupport: safeText($("profileSupportInput").value) || "Makes time to support teammates through practical help and honest feedback.",
-        communityImpact: safeText($("profileCommunityInput").value) || "Looks for ways to connect professional skills with community needs."
+        communityImpact: safeText($("profileCommunityInput").value) || "Looks for ways to connect professional skills with community needs.",
+        imageUrl: profileImageUrl,
+        attachmentName: profileAttachmentName,
+        posts: projectPosts.slice()
       };
     }
 
@@ -1558,19 +1906,74 @@
       }
     }
 
+    function showApplicantPage(page, focusHeading = false) {
+      activeApplicantPage = page;
+      $("applicantWorkspace").hidden = page !== "builder";
+      $("applicantLivePage").hidden = page !== "hub";
+      $("applicantCommunityPage").hidden = page !== "community";
+
+      if (page === "hub") {
+        renderApplicantLiveHub();
+        if (focusHeading) window.setTimeout(() => $("launchPageTitle").focus(), 0);
+      }
+      if (page === "community") {
+        renderProjectFeed();
+        if (focusHeading) window.setTimeout(() => $("communityPageTitle").focus(), 0);
+      }
+      if (page === "builder") renderApplicantPrivacyStatus();
+    }
+
+    function isLaunchReady() {
+      return Boolean(
+        safeText($("profileNameInput").value) &&
+        safeText($("profileRoleInput").value) &&
+        safeText($("profileSummaryInput").value)
+      );
+    }
+
+    function launchApplicantProfile() {
+      if (!isLaunchReady()) {
+        showApplicantPage("builder");
+        document.querySelectorAll(".method-tab").forEach(tab => {
+          const isForm = tab.dataset.method === "form";
+          tab.classList.toggle("active", isForm);
+          tab.setAttribute("aria-selected", String(isForm));
+        });
+        $("uploadPane").hidden = true;
+        $("formPane").hidden = false;
+        showToast("Add your name, role title, and short introduction before launching.");
+        $("profileNameInput").focus();
+        return;
+      }
+      applicantLaunched = true;
+      updateCandidatePreview();
+      syncInteractiveApplicant();
+      showApplicantPage("hub", true);
+      showToast("Your Forward profile is live in this browser-only demo.");
+    }
+
+    function openCommunityPage() {
+      if (!applicantLaunched) {
+        showToast("Launch your profile before creating public project posts.");
+        return;
+      }
+      showApplicantPage("community", true);
+    }
+
     function setRole(role) {
       activeRole = role;
       $("currentRole").textContent = role === "applicant" ? "Applicant" : "Hiring team";
       $("roleModal").hidden = true;
       $("applicantWorkspace").hidden = true;
+      $("applicantLivePage").hidden = true;
+      $("applicantCommunityPage").hidden = true;
       $("hiringWorkspace").hidden = true;
       setHeroForRole(role);
 
       if (role === "applicant") {
         if (applicantQuizComplete) {
-          $("applicantWorkspace").hidden = false;
-          renderApplicantPrivacyStatus();
-          showToast("Applicant workspace ready. Your matching preferences stay private.");
+          showApplicantPage(applicantLaunched ? activeApplicantPage : "builder");
+          showToast(applicantLaunched ? "Your local public presence is ready." : "Applicant workspace ready. Your matching preferences stay private.");
         } else {
           openApplicantQuiz();
         }
@@ -1677,7 +2080,7 @@
         return;
       }
       const compatibility = calculateCompatibility(person);
-      $("appAvatar").textContent = person.initials;
+      renderAvatar("appAvatar", "appProfileImage", "appInitials", person.name, person.imageUrl);
       $("appName").textContent = person.name;
       $("appRole").textContent = person.role;
       $("appLocation").textContent = person.location;
@@ -1768,6 +2171,182 @@
       });
     }
 
+    function currentHiringTeamName() {
+      return safeText($("hiringTeamName").value) || "Hiring team";
+    }
+
+    function recordManagerView(person, action = "Viewed your public profile") {
+      if (!applicantLaunched || activeRole !== "hiring" || person.id !== "avery") return;
+      const team = currentHiringTeamName();
+      const existing = managerViews.find(item => item.team === team);
+      if (existing) {
+        existing.action = action;
+        existing.time = "Just now";
+      } else {
+        managerViews.unshift({ team, action, time: "Just now" });
+      }
+      renderManagerActivity();
+    }
+
+    function renderManagerActivity() {
+      const host = $("managerActivityList");
+      host.replaceChildren();
+      if (!managerViews.length) {
+        const empty = document.createElement("p");
+        empty.className = "empty";
+        empty.textContent = "No local manager activity yet. When a hiring team opens your full story or expresses interest, it appears here.";
+        host.append(empty);
+        return;
+      }
+      managerViews.forEach(item => {
+        const row = document.createElement("div");
+        row.className = "manager-item";
+        const title = document.createElement("strong");
+        const detail = document.createElement("span");
+        const time = document.createElement("small");
+        title.textContent = item.team;
+        detail.textContent = item.action;
+        time.textContent = item.time + " · local demo signal";
+        row.append(title, detail, time);
+        host.append(row);
+      });
+    }
+
+    function renderApplicantFeedback() {
+      const host = $("applicantFeedbackList");
+      host.replaceChildren();
+      const sharedFeedback = feedback.filter(item => item.person.id === "avery" && item.shared);
+      if (!sharedFeedback.length) {
+        const empty = document.createElement("p");
+        empty.className = "empty";
+        empty.textContent = "No manager feedback has been shared yet. Shared, constructive notes will appear here.";
+        host.append(empty);
+        return;
+      }
+      sharedFeedback.forEach(item => {
+        const row = document.createElement("div");
+        row.className = "feedback-item";
+        const title = document.createElement("strong");
+        const detail = document.createElement("span");
+        title.textContent = item.reviewer || "Hiring team";
+        detail.textContent = item.reason + (item.note ? " — " + item.note : "");
+        row.append(title, detail);
+        host.append(row);
+      });
+    }
+
+    function renderApplicantLiveHub() {
+      const person = getInteractiveApplicant();
+      if (!person) return;
+      renderAvatar("liveAvatar", "liveProfileImage", "liveInitials", person.name, person.imageUrl);
+      $("liveName").textContent = person.name;
+      $("liveRole").textContent = person.role;
+      $("liveLocation").textContent = person.location.replace(" · Profile built in Forward", "");
+      $("liveSummary").textContent = person.summary;
+      $("liveTags").replaceChildren(...person.skills.map(skill => {
+        const tag = document.createElement("span");
+        tag.className = "tag";
+        tag.textContent = skill;
+        return tag;
+      }));
+      renderAttachment("liveAttachment", "liveAttachmentText", person.attachmentName);
+      renderManagerActivity();
+      renderApplicantFeedback();
+    }
+
+    function renderProjectFeed() {
+      const host = $("projectFeedList");
+      host.replaceChildren();
+      if (!projectPosts.length) {
+        const empty = document.createElement("p");
+        empty.className = "empty";
+        empty.textContent = "No project posts yet. Add a photo, story, or award to bring your work to life.";
+        host.append(empty);
+        return;
+      }
+      projectPosts.forEach(post => {
+        const article = document.createElement("article");
+        article.className = "project-post";
+        if (post.imageUrl) {
+          const image = document.createElement("img");
+          image.src = post.imageUrl;
+          image.alt = "Project image for " + post.title;
+          article.append(image);
+        }
+        const copy = document.createElement("div");
+        copy.className = "project-post-copy";
+        const label = document.createElement("p");
+        label.className = "eyebrow";
+        label.textContent = "Project update";
+        const title = document.createElement("h4");
+        title.textContent = post.title;
+        const story = document.createElement("p");
+        story.textContent = post.story;
+        copy.append(label, title, story);
+        const meta = document.createElement("div");
+        meta.className = "post-meta";
+        if (post.award) {
+          const award = document.createElement("span");
+          award.className = "award-chip";
+          award.textContent = "🏆 " + post.award;
+          meta.append(award);
+        }
+        if (post.documentName) {
+          const documentChip = document.createElement("span");
+          documentChip.className = "document-chip";
+          documentChip.textContent = "▣ " + post.documentName;
+          meta.append(documentChip);
+        }
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "detail-button";
+        remove.dataset.postId = post.id;
+        remove.textContent = "Remove";
+        meta.append(remove);
+        if (meta.childElementCount) copy.append(meta);
+        article.append(copy);
+        host.append(article);
+      });
+    }
+
+    function createProjectPost(event) {
+      event.preventDefault();
+      if (!applicantLaunched) return;
+      const title = safeText($("projectPostTitle").value);
+      const story = safeText($("projectPostStory").value);
+      const award = safeText($("projectPostAward").value);
+      const file = $("projectPostMedia").files[0];
+      if (!title || !story) {
+        $("projectPostStatus").textContent = "Add a title and project story before publishing.";
+        return;
+      }
+      const allowed = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
+      if (file && (file.size > 10 * 1024 * 1024 || !allowed.includes(file.type))) {
+        $("projectPostStatus").textContent = "Choose a PDF, JPG, PNG, or WebP file no larger than 10 MB.";
+        return;
+      }
+      const post = {
+        id: "post-" + Date.now(),
+        title,
+        story,
+        award,
+        imageUrl: file && file.type.startsWith("image/") ? URL.createObjectURL(file) : "",
+        documentName: file && file.type === "application/pdf" ? file.name : ""
+      };
+      projectPosts.unshift(post);
+      $("communityPostForm").reset();
+      $("projectPostStatus").textContent = "Your project post is now visible in this local browser preview.";
+      renderProjectFeed();
+      if (!$("applicantLivePage").hidden) renderApplicantLiveHub();
+    }
+
+    function removeProjectPost(id) {
+      const post = projectPosts.find(item => item.id === id);
+      if (post?.imageUrl) URL.revokeObjectURL(post.imageUrl);
+      projectPosts = projectPosts.filter(item => item.id !== id);
+      renderProjectFeed();
+    }
+
     function createConnection(person, fromHiring) {
       if (!connections[person.id]) {
         connections[person.id] = {
@@ -1777,6 +2356,7 @@
         };
       }
       if (fromHiring) connections[person.id].fromHiring = true;
+      if (fromHiring) recordManagerView(person, "Expressed interest in connecting");
       return connections[person.id];
     }
 
@@ -1791,6 +2371,8 @@
     function openProfile() {
       const person = currentApplicant();
       if (!person) return;
+      recordManagerView(person);
+      renderAvatar("detailAvatar", "detailProfileImage", "detailInitials", person.name, person.imageUrl);
       $("detailName").textContent = person.name;
       $("detailText").textContent = person.summary;
       $("detailTags").replaceChildren(...person.skills.map(skill => {
@@ -1845,6 +2427,38 @@
       $("chatInput").focus();
     }
 
+    function handleProfileMedia() {
+      const file = $("profileMediaFile").files[0];
+      if (!file) return;
+      const allowed = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
+      if (file.size > 10 * 1024 * 1024 || !allowed.includes(file.type)) {
+        $("profileMediaStatus").textContent = "Choose a PDF, JPG, PNG, or WebP file no larger than 10 MB.";
+        $("profileMediaFile").value = "";
+        return;
+      }
+      if (file.type.startsWith("image/")) {
+        if (profileImageUrl) URL.revokeObjectURL(profileImageUrl);
+        profileImageUrl = URL.createObjectURL(file);
+        $("profileMediaStatus").textContent = file.name + " is now your profile image in this local preview.";
+        $("removeProfileImage").hidden = false;
+      } else {
+        profileAttachmentName = file.name;
+        $("profileMediaStatus").textContent = file.name + " is attached as a supporting document in this local preview.";
+      }
+      updateCandidatePreview();
+    }
+
+    function removeProfileImage() {
+      if (profileImageUrl) URL.revokeObjectURL(profileImageUrl);
+      profileImageUrl = null;
+      $("profileMediaFile").value = "";
+      $("removeProfileImage").hidden = true;
+      $("profileMediaStatus").textContent = profileAttachmentName
+        ? "Profile image removed. Supporting document " + profileAttachmentName + " remains attached."
+        : "Profile image removed. Your initials appear until you add an image.";
+      updateCandidatePreview();
+    }
+
     function updateCandidatePreview() {
       const name = safeText($("profileNameInput").value) || "Your name";
       const role = safeText($("profileRoleInput").value) || "Your role title";
@@ -1859,7 +2473,7 @@
         colleagueSupport: safeText($("profileSupportInput").value),
         communityImpact: safeText($("profileCommunityInput").value)
       };
-      $("previewInitials").textContent = initials(name);
+      renderAvatar("previewAvatar", "previewProfileImage", "previewInitials", name, profileImageUrl);
       $("previewName").textContent = name;
       $("previewRole").textContent = role;
       $("previewLocation").textContent = location;
@@ -1870,6 +2484,7 @@
         tag.textContent = skill;
         return tag;
       }));
+      renderAttachment("previewAttachment", "previewAttachmentText", profileAttachmentName);
       renderPublicStory("preview", publicStory);
       syncInteractiveApplicant();
     }
@@ -1892,11 +2507,9 @@
         environment: $("applicantEnvironment").value
       };
       applicantQuizComplete = true;
-      syncInteractiveApplicant();
       $("applicantQuizModal").hidden = true;
       if (activeRole === "applicant") {
-        $("applicantWorkspace").hidden = false;
-        renderApplicantPrivacyStatus();
+        showApplicantPage("builder");
         showToast("Private matching profile saved. Your public builder is ready.");
       }
     });
@@ -1942,11 +2555,15 @@
       feedback.unshift({
         person,
         reason: $("feedbackReason").value,
-        note: safeText($("feedbackNote").value)
+        note: safeText($("feedbackNote").value),
+        shared: $("shareFeedbackWithApplicant").checked,
+        reviewer: currentHiringTeamName()
       });
       $("feedbackNote").value = "";
+      $("shareFeedbackWithApplicant").checked = true;
       $("feedbackModal").hidden = true;
       renderFeedback();
+      renderApplicantFeedback();
       showToast("Feedback saved for " + person.name + "; future recommendations can learn from it.");
       advance("moving-left");
     });
@@ -1957,6 +2574,13 @@
       if (button) openChat(button.dataset.chatId);
     });
     $("applicantChat").addEventListener("click", () => openChat("avery"));
+    $("openApplicantConversation").addEventListener("click", () => openChat("avery"));
+    $("launchProfile").addEventListener("click", launchApplicantProfile);
+    $("backToBuilder").addEventListener("click", () => showApplicantPage("builder", true));
+    $("openCommunityPage").addEventListener("click", openCommunityPage);
+    $("openCommunityPageBottom").addEventListener("click", openCommunityPage);
+    $("openCommunityFromProfile").addEventListener("click", openCommunityPage);
+    $("backToLivePage").addEventListener("click", () => showApplicantPage("hub", true));
     $("closeChat").addEventListener("click", () => { $("chatModal").hidden = true; });
     $("chatForm").addEventListener("submit", event => {
       event.preventDefault();
@@ -1984,6 +2608,18 @@
 
     ["profileNameInput", "profileRoleInput", "profileLocationInput", "profileSkillsInput", "profileSummaryInput", "profileMissionInput", "profileValuesInput", "profileWellbeingInput", "profileSupportInput", "profileCommunityInput"].forEach(id => {
       $(id).addEventListener("input", updateCandidatePreview);
+    });
+
+    $("profileMediaFile").addEventListener("change", handleProfileMedia);
+    $("removeProfileImage").addEventListener("click", removeProfileImage);
+    $("communityPostForm").addEventListener("submit", createProjectPost);
+    $("projectPostMedia").addEventListener("change", () => {
+      const file = $("projectPostMedia").files[0];
+      $("projectPostStatus").textContent = file ? file.name + " will be attached to this local project post." : "";
+    });
+    $("projectFeedList").addEventListener("click", event => {
+      const button = event.target.closest("[data-post-id]");
+      if (button) removeProjectPost(button.dataset.postId);
     });
 
     $("resumeFile").addEventListener("change", () => {
@@ -2039,12 +2675,19 @@
 
     window.addEventListener("beforeunload", () => {
       if (resumeUrl) URL.revokeObjectURL(resumeUrl);
+      if (profileImageUrl) URL.revokeObjectURL(profileImageUrl);
+      projectPosts.forEach(post => {
+        if (post.imageUrl) URL.revokeObjectURL(post.imageUrl);
+      });
     });
 
     updateCandidatePreview();
     renderApplicantCard();
     renderYesList();
     renderFeedback();
+    renderManagerActivity();
+    renderApplicantFeedback();
+    renderProjectFeed();
     initializeIntro();
   </script>
 </body>
