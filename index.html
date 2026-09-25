@@ -840,6 +840,7 @@
     }
     .dialog h2 { margin: 8px 0 10px; font-size: clamp(1.85rem, 4vw, 2.35rem); font-weight: 600; letter-spacing: -.055em; }
     .dialog > p { color: var(--ink-soft); line-height: 1.58; }
+    .intro-replay-modal { margin-top: 4px; }
     .close {
       position: absolute;
       top: 15px;
@@ -1006,6 +1007,7 @@
     <div class="brand">for<b>ward</b></div>
     <div class="role-status">
       <span>Viewing as: <strong id="currentRole">choose a role</strong></span>
+      <button class="link-button" id="replayIntro" type="button">Play intro</button>
       <button class="link-button" id="changeRole" type="button">Change role</button>
     </div>
   </nav>
@@ -1426,6 +1428,7 @@
       <p class="eyebrow">Welcome to Forward</p>
       <h2 id="roleModalTitle">How are you joining today?</h2>
       <p>Each role starts with a private intake so that public profiles stay focused and matching signals work in the background.</p>
+      <button class="link-button intro-replay-modal" id="replayIntroFromRole" type="button">Play the intro again</button>
       <div class="roles">
         <button class="role-button" data-role="applicant" type="button">
           <b>I'm an applicant</b>
@@ -1715,9 +1718,11 @@
     let profileAttachmentName = "";
     let projectPosts = [];
     let managerViews = [];
-    const introStorageKey = "forward-opener-seen-v1";
+    const introStorageKey = "forward-opener-seen-v2";
     let introExitStarted = false;
     let introExitFinished = false;
+    let introReturnsToRoleChooser = true;
+    let introReturnFocus = null;
 
     function prefersReducedMotion() {
       return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -1760,7 +1765,14 @@
         shell.inert = false;
         shell.removeAttribute("aria-hidden");
         shell.classList.add("intro-revealed");
-        showRoleChooser();
+        if (introReturnsToRoleChooser) {
+          showRoleChooser();
+        } else {
+          const focusTarget = introReturnFocus instanceof HTMLElement && document.contains(introReturnFocus)
+            ? introReturnFocus
+            : $("replayIntro");
+          window.setTimeout(() => focusTarget?.focus(), 0);
+        }
         window.setTimeout(() => shell.classList.remove("intro-revealed"), 800);
       };
 
@@ -1776,6 +1788,26 @@
       window.setTimeout(revealExperience, 900);
     }
 
+    function startIntro(returnToRoleChooser = true) {
+      const intro = $("introOverlay");
+      const shell = $("siteShell");
+      if (!intro || !shell) return;
+
+      introReturnsToRoleChooser = returnToRoleChooser;
+      introReturnFocus = returnToRoleChooser ? null : document.activeElement;
+      introExitStarted = false;
+      introExitFinished = false;
+      intro.hidden = false;
+      intro.classList.remove("is-ready", "is-leaving");
+      shell.inert = true;
+      shell.setAttribute("aria-hidden", "true");
+      document.body.classList.add("intro-active");
+      window.requestAnimationFrame(() => intro.classList.add("is-ready"));
+      window.setTimeout(() => {
+        if (!intro.hidden && !introExitStarted) $("enterExperience")?.focus();
+      }, 1150);
+    }
+
     function initializeIntro() {
       const intro = $("introOverlay");
       const shell = $("siteShell");
@@ -1789,13 +1821,7 @@
         return;
       }
 
-      shell.inert = true;
-      shell.setAttribute("aria-hidden", "true");
-      document.body.classList.add("intro-active");
-      window.requestAnimationFrame(() => intro.classList.add("is-ready"));
-      window.setTimeout(() => {
-        if (!intro.hidden && !introExitStarted) $("enterExperience")?.focus();
-      }, 1150);
+      startIntro(true);
     }
 
     function showToast(message) {
@@ -2497,6 +2523,12 @@
       $("applicantQuizModal").hidden = true;
       $("hiringQuizModal").hidden = true;
       $("roleModal").hidden = false;
+    });
+
+    $("replayIntro").addEventListener("click", () => startIntro(false));
+    $("replayIntroFromRole").addEventListener("click", () => {
+      $("roleModal").hidden = true;
+      startIntro(true);
     });
 
     $("applicantQuizForm").addEventListener("submit", event => {
