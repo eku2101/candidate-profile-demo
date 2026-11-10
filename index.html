@@ -425,6 +425,15 @@
     .doc-preview { margin-top: 16px; }
     .doc-preview img { display: block; max-width: 100%; max-height: 370px; border: 1px solid var(--line); border-radius: 11px; }
     .doc-preview iframe { width: 100%; height: 340px; border: 1px solid var(--line); border-radius: 11px; }
+    .save-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 20px; margin-bottom: 22px; }
+    .save-bar p { flex-basis: 100%; margin: 0; color: var(--ink-soft); font-size: .85rem; line-height: 1.6; }
+    .career-section { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 15px; }
+    .career-section summary { cursor: pointer; font-weight: 750; }
+    .career-section p { white-space: pre-wrap; overflow-wrap: anywhere; font-size: .88rem; line-height: 1.65; }
+    .resume-review textarea, #pasteResumeText { width: 100%; min-height: 120px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; resize: vertical; }
+    .resume-review .long-field { min-height: 170px; }
+    .resume-review .dialog-actions { flex-wrap: wrap; }
+    .import-warning { color: var(--accent-deep); font-size: .86rem; line-height: 1.5; }
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
     .form-grid .full { grid-column: 1 / -1; }
     .story-fields {
@@ -1046,6 +1055,13 @@
         <button class="button secondary" id="editApplicantQuiz" type="button">Edit private preferences</button>
       </article>
 
+      <div class="card save-bar">
+        <button class="button primary" id="saveProfileButton" type="button">Save profile in this browser</button>
+        <button class="button secondary" id="clearProfileButton" type="button">Clear saved profile</button>
+        <p data-profile-save-status role="status">No profile saved yet.</p>
+        <p>One profile is saved in this browser on this device. Clearing this site's browser data removes it. Your résumé is read on your device.</p>
+      </div>
+
       <details class="card discussion-panel">
         <summary>Prepare for a conversation about how you work</summary>
         <div id="applicantDiscussion"></div>
@@ -1065,8 +1081,14 @@
           <section class="method-pane" id="uploadPane">
             <label for="resumeFile">Choose a résumé or portfolio file</label>
             <input id="resumeFile" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp" />
-            <p class="help">PDF, JPG, PNG, or WebP · 10 MB maximum · previewed locally in this browser only.</p>
+            <p class="help">PDF, JPG, PNG, or WebP · 10 MB maximum. A text-based PDF can fill your profile. Images are saved as attachments and do not fill in text.</p>
             <p class="file-status" id="fileStatus" role="status">No document selected.</p>
+            <details>
+              <summary>Can't read your PDF? Paste résumé text</summary>
+              <label for="pasteResumeText">Résumé text</label>
+              <textarea id="pasteResumeText" maxlength="150000" placeholder="Paste your résumé, including headings such as Experience, Education, and Skills."></textarea>
+              <button class="button secondary" id="parsePastedResume" type="button">Review pasted résumé</button>
+            </details>
             <div class="doc-preview" id="docPreview"></div>
           </section>
 
@@ -1074,27 +1096,47 @@
             <div class="form-grid">
               <div>
                 <label for="profileNameInput">Name</label>
-                <input id="profileNameInput" value="Avery Johnson" placeholder="Your name" />
+                <input id="profileNameInput" placeholder="Your name" />
               </div>
               <div>
                 <label for="profileRoleInput">Role title</label>
-                <input id="profileRoleInput" value="Product Designer" placeholder="e.g., Product Designer" />
+                <input id="profileRoleInput" placeholder="e.g., Product Designer" />
               </div>
               <div class="full">
                 <label for="profileLocationInput">Location</label>
-                <input id="profileLocationInput" value="Philadelphia, PA" placeholder="City, state, or Remote" />
+                <input id="profileLocationInput" placeholder="City, state, or Remote" />
               </div>
               <div class="full">
                 <label for="profileSkillsInput">Core skills</label>
-                <input id="profileSkillsInput" value="User research, Figma, Prototyping, Collaboration" placeholder="Separate skills with commas" />
+                <input id="profileSkillsInput" placeholder="Separate skills with commas" />
               </div>
               <div class="full">
                 <label for="profileSummaryInput">Short introduction</label>
-                <textarea id="profileSummaryInput" placeholder="Tell teams what you do best.">Designing clear, inclusive experiences that turn customer insight into useful products.</textarea>
+                <textarea id="profileSummaryInput" placeholder="Tell teams what you do best."></textarea>
+              </div>
+              <div class="full">
+                <label for="profileExperienceInput">Previous jobs &amp; experience</label>
+                <textarea id="profileExperienceInput" rows="9" placeholder="Job titles, employers, dates, and accomplishments"></textarea>
+              </div>
+              <div class="full">
+                <label for="profileEducationInput">Education</label>
+                <textarea id="profileEducationInput" rows="5" placeholder="Schools, degrees, and dates"></textarea>
+              </div>
+              <div class="full">
+                <label for="profileCredentialsInput">Certifications &amp; achievements</label>
+                <textarea id="profileCredentialsInput" rows="4" placeholder="Licenses, certifications, awards, and training"></textarea>
+              </div>
+              <div>
+                <label for="profileEmailInput">Email (saved privately)</label>
+                <input id="profileEmailInput" type="email" placeholder="you@example.com" />
+              </div>
+              <div>
+                <label for="profilePhoneInput">Phone (saved privately)</label>
+                <input id="profilePhoneInput" type="tel" placeholder="Your phone number" />
               </div>
               <fieldset class="profile-media">
                 <legend>Add your media</legend>
-                <p class="help">Choose an image, JPG, PNG, WebP, or PDF. Images become your profile picture automatically; PDFs are added as a supporting document instead.</p>
+                <p class="help">Images become your profile picture. PDFs open the résumé importer so you can review and save their information to your profile.</p>
                 <div class="media-upload-row">
                   <label class="media-upload-button" for="profileMediaFile">Add image, PDF, JPG, or more</label>
                   <input id="profileMediaFile" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp" hidden />
@@ -1108,23 +1150,23 @@
                 <div class="form-grid">
                   <div class="full">
                     <label for="profileMissionInput">Why I do this work</label>
-                    <textarea id="profileMissionInput" placeholder="Share the purpose behind your work.">I design tools that give more people a clear voice in the systems they use every day.</textarea>
+                    <textarea id="profileMissionInput" placeholder="Share the purpose behind your work."></textarea>
                   </div>
                   <div class="full">
                     <label for="profileValuesInput">Professional values</label>
-                    <input id="profileValuesInput" value="Care, Clarity, Shared ownership" placeholder="Separate values with commas" />
+                    <input id="profileValuesInput" placeholder="Separate values with commas" />
                   </div>
                   <div class="full">
                     <label for="profileWellbeingInput">How I strengthened team well-being</label>
-                    <textarea id="profileWellbeingInput" placeholder="Describe a people-first habit, ritual, or improvement.">Created low-pressure weekly design reflections that made it safer to ask for help early.</textarea>
+                    <textarea id="profileWellbeingInput" placeholder="Describe a people-first habit, ritual, or improvement."></textarea>
                   </div>
                   <div class="full">
                     <label for="profileSupportInput">How I supported colleagues</label>
-                    <textarea id="profileSupportInput" placeholder="Share how you made teammates stronger.">Mentor early-career designers through clear feedback, shared templates, and honest career conversations.</textarea>
+                    <textarea id="profileSupportInput" placeholder="Share how you made teammates stronger."></textarea>
                   </div>
                   <div class="full">
                     <label for="profileCommunityInput">Community impact I am proud of</label>
-                    <textarea id="profileCommunityInput" placeholder="Share a community-facing contribution connected to your work.">Volunteer design support for a local nonprofit that helps first-generation students navigate college applications.</textarea>
+                    <textarea id="profileCommunityInput" placeholder="Share a community-facing contribution connected to your work."></textarea>
                   </div>
                 </div>
               </fieldset>
@@ -1148,6 +1190,7 @@
             </div>
             <p class="summary" id="previewSummary">Designing clear, inclusive experiences that turn customer insight into useful products.</p>
             <div class="tags" id="previewTags"></div>
+            <div id="previewCareer"></div>
             <div class="profile-attachment" id="previewAttachment" hidden>
               <span aria-hidden="true">▣</span><span id="previewAttachmentText"></span>
             </div>
@@ -1255,6 +1298,7 @@
       </article>
 
       <article class="card discussion-panel" id="applicantLiveDiscussion" aria-label="Discussion prompts for applicants"></article>
+      <p class="help" data-profile-save-status role="status">No profile saved yet.</p>
 
       <div class="applicant-hub-grid">
         <article class="card live-profile-card">
@@ -1272,6 +1316,7 @@
           </div>
           <p class="summary" id="liveSummary">Your public story appears here for teams in the local demo.</p>
           <div class="tags" id="liveTags"></div>
+          <div id="liveCareer"></div>
           <div class="profile-attachment" id="liveAttachment" hidden>
             <span aria-hidden="true">▣</span><span id="liveAttachmentText"></span>
           </div>
@@ -1386,6 +1431,7 @@
           <p class="eyebrow">Profile story</p>
           <p class="summary" id="appSummary"></p>
           <div class="tags" id="appTags"></div>
+          <div id="appCareer"></div>
           <div class="review-story">
             <section class="story-panel">
               <p class="eyebrow">Why this work matters</p>
@@ -1463,7 +1509,7 @@
       <p class="eyebrow">Step 1 · Private matching profile</p>
       <h2 id="applicantQuizTitle">What helps you do your best work?</h2>
       <p>These answers prepare helpful conversation topics. Different preferences never lower your ranking or exclude you.</p>
-      <div class="privacy-notice"><b>Your choice:</b> answers stay in this browser session and off your public profile. Suggested topics may show where preferences differ; the other side does not see your selected answers. You choose what to discuss.</div>
+      <div class="privacy-notice"><b>Your choice:</b> answers are saved with your profile in this browser on this device and stay off your public profile. Suggested topics may show where preferences differ; the other side does not see your selected answers. You choose what to discuss.</div>
       <form class="quiz-form" id="applicantQuizForm">
         <fieldset>
           <legend>Your work preferences</legend>
@@ -1657,6 +1703,7 @@
       </div>
       <p id="detailText"></p>
       <div class="tags" id="detailTags"></div>
+      <div id="detailCareer"></div>
       <div class="profile-story">
         <section class="story-panel">
           <p class="eyebrow">Why this work matters</p>
@@ -1698,9 +1745,32 @@
     </aside>
   </div>
 
+  <div class="overlay" id="resumeImportModal" hidden role="dialog" aria-modal="true" aria-labelledby="resumeImportTitle">
+    <article class="dialog resume-review">
+      <p class="eyebrow">Résumé to profile</p>
+      <h2 id="resumeImportTitle">Review your imported details</h2>
+      <p id="resumeImportDescription">Check the extracted details, especially jobs and dates. Saving replaces the matching fields below in your profile; empty fields leave existing details unchanged. Your personal story stays as written.</p>
+      <p class="import-warning" id="resumeImportWarnings" role="status"></p>
+      <form id="resumeImportForm">
+        <div class="question-grid" id="resumeImportFields"></div>
+        <details>
+          <summary>View all extracted text</summary>
+          <label for="resumeRawText">Original extracted text for reference</label>
+          <textarea id="resumeRawText" readonly></textarea>
+        </details>
+        <p class="help">Saved on this device in this browser. Your PDF is never sent to a résumé-reading service. Saving does not launch your public profile.</p>
+        <div class="dialog-actions">
+          <button class="cancel" id="cancelResumeImport" type="button">Cancel import</button>
+          <button class="submit" id="saveResumeImport" type="submit">Save résumé to my profile</button>
+        </div>
+      </form>
+    </article>
+  </div>
+
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </div>
 
+  <script src="resume-tools.js"></script>
   <script>
     const publicApplicants = [
       {
@@ -1976,22 +2046,25 @@
 
     function getInteractiveApplicant() {
       if (!applicantQuizComplete || !applicantLaunched) return null;
-      const name = safeText($("profileNameInput").value) || "Avery Johnson";
+      const name = safeText($("profileNameInput").value) || "Your name";
       const skills = $("profileSkillsInput").value.split(",").map(skill => safeText(skill)).filter(Boolean);
       const values = $("profileValuesInput").value.split(",").map(value => safeText(value)).filter(Boolean);
       return {
         id: "avery",
         name,
         initials: initials(name),
-        role: safeText($("profileRoleInput").value) || "Product Designer",
-        location: (safeText($("profileLocationInput").value) || "Philadelphia, PA") + " · Profile built in Forward",
+        role: safeText($("profileRoleInput").value) || "Role not added",
+        location: (safeText($("profileLocationInput").value) || "Location not added") + " · Profile built in Forward",
         summary: safeText($("profileSummaryInput").value) || "Candidate profile preview",
         skills: skills.length ? skills : ["Core skills"],
-        mission: safeText($("profileMissionInput").value) || "I bring thoughtful care to the work and people around me.",
-        values: values.length ? values : ["Care", "Clarity"],
-        wellbeing: safeText($("profileWellbeingInput").value) || "Shares people-first habits that make collaboration more sustainable.",
-        colleagueSupport: safeText($("profileSupportInput").value) || "Makes time to support teammates through practical help and honest feedback.",
-        communityImpact: safeText($("profileCommunityInput").value) || "Looks for ways to connect professional skills with community needs.",
+        experience: safeText($("profileExperienceInput").value),
+        education: safeText($("profileEducationInput").value),
+        credentials: safeText($("profileCredentialsInput").value),
+        mission: safeText($("profileMissionInput").value),
+        values,
+        wellbeing: safeText($("profileWellbeingInput").value),
+        colleagueSupport: safeText($("profileSupportInput").value),
+        communityImpact: safeText($("profileCommunityInput").value),
         imageUrl: profileImageUrl,
         attachmentName: profileAttachmentName,
         posts: projectPosts.slice()
@@ -2073,6 +2146,7 @@
         return;
       }
       applicantLaunched = true;
+      saveApplicantProfile();
       updateCandidatePreview();
       syncInteractiveApplicant();
       showApplicantPage("hub", true);
@@ -2217,11 +2291,11 @@
     }
 
     function renderPublicStory(prefix, person) {
-      const values = person.values && person.values.length ? person.values : ["Care", "Clarity"];
-      $(prefix + "Mission").textContent = person.mission || "I bring thoughtful care to the work and people around me.";
-      $(prefix + "Wellbeing").textContent = person.wellbeing || "Creates people-first habits that make collaboration more sustainable.";
-      $(prefix + "Support").textContent = person.colleagueSupport || "Makes time to support teammates with practical help and honest feedback.";
-      $(prefix + "Community").textContent = person.communityImpact || "Looks for ways to connect professional skills with community needs.";
+      const values = person.values || [];
+      $(prefix + "Mission").textContent = person.mission || "A personal mission has not been added yet.";
+      $(prefix + "Wellbeing").textContent = person.wellbeing || "A team-care story has not been added yet.";
+      $(prefix + "Support").textContent = person.colleagueSupport || "A colleague-support story has not been added yet.";
+      $(prefix + "Community").textContent = person.communityImpact || "A community contribution has not been added yet.";
       $(prefix + "Values").replaceChildren(...values.map(value => {
         const tag = document.createElement("span");
         tag.className = "tag";
@@ -2253,6 +2327,7 @@
         return tag;
       }));
       renderPublicStory("app", person);
+      renderCareer("appCareer", person);
       $("profileScore").textContent = person.id === "avery" ? "Demo experience baseline" : experienceLabels[experience];
       $("fitScore").textContent = experienceLabels[experience];
       $("fitNote").textContent = "Role brief: " + experienceLabels[hiringCriteria.experience] + ". Review order uses experience only; working preferences never lower it." + (person.id === "avery" ? " Applicant-built profiles use a mid-level demo baseline." : "");
@@ -2413,6 +2488,7 @@
         return tag;
       }));
       renderAttachment("liveAttachment", "liveAttachmentText", person.attachmentName);
+      renderCareer("liveCareer", person);
       renderManagerActivity();
       renderApplicantFeedback();
     }
@@ -2545,6 +2621,7 @@
         return tag;
       }));
       renderPublicStory("detail", person);
+      renderCareer("detailCareer", person);
       $("profileModal").hidden = false;
       $("closeProfile").focus();
     }
@@ -2590,7 +2667,7 @@
       $("chatInput").focus();
     }
 
-    function handleProfileMedia() {
+    async function handleProfileMedia() {
       const file = $("profileMediaFile").files[0];
       if (!file) return;
       const allowed = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
@@ -2600,26 +2677,30 @@
         return;
       }
       if (file.type.startsWith("image/")) {
+        savedPhotoFile = file;
         if (profileImageUrl) URL.revokeObjectURL(profileImageUrl);
         profileImageUrl = URL.createObjectURL(file);
         $("profileMediaStatus").textContent = file.name + " is now your profile image in this local preview.";
         $("removeProfileImage").hidden = false;
       } else {
-        profileAttachmentName = file.name;
-        $("profileMediaStatus").textContent = file.name + " is attached as a supporting document in this local preview.";
+        await importResumeFile(file);
+        return;
       }
       updateCandidatePreview();
+      saveApplicantProfile();
     }
 
     function removeProfileImage() {
       if (profileImageUrl) URL.revokeObjectURL(profileImageUrl);
       profileImageUrl = null;
+      savedPhotoFile = null;
       $("profileMediaFile").value = "";
       $("removeProfileImage").hidden = true;
       $("profileMediaStatus").textContent = profileAttachmentName
         ? "Profile image removed. Supporting document " + profileAttachmentName + " remains attached."
         : "Profile image removed. Your initials appear until you add an image.";
       updateCandidatePreview();
+      saveApplicantProfile();
     }
 
     function updateCandidatePreview() {
@@ -2649,6 +2730,7 @@
       }));
       renderAttachment("previewAttachment", "previewAttachmentText", profileAttachmentName);
       renderPublicStory("preview", publicStory);
+      renderCareer("previewCareer", readProfileFields());
       syncInteractiveApplicant();
     }
 
@@ -2680,6 +2762,7 @@
         environment: $("applicantEnvironment").value
       };
       applicantQuizComplete = true;
+      saveApplicantProfile();
       $("applicantQuizModal").hidden = true;
       if (activeRole === "applicant") {
         showApplicantPage("builder");
@@ -2779,10 +2862,6 @@
       });
     });
 
-    ["profileNameInput", "profileRoleInput", "profileLocationInput", "profileSkillsInput", "profileSummaryInput", "profileMissionInput", "profileValuesInput", "profileWellbeingInput", "profileSupportInput", "profileCommunityInput"].forEach(id => {
-      $(id).addEventListener("input", updateCandidatePreview);
-    });
-
     $("profileMediaFile").addEventListener("change", handleProfileMedia);
     $("removeProfileImage").addEventListener("click", removeProfileImage);
     $("communityPostForm").addEventListener("submit", createProjectPost);
@@ -2795,30 +2874,7 @@
       if (button) removeProjectPost(button.dataset.postId);
     });
 
-    $("resumeFile").addEventListener("change", () => {
-      const file = $("resumeFile").files[0];
-      if (!file) return;
-      if (resumeUrl) URL.revokeObjectURL(resumeUrl);
-      $("docPreview").replaceChildren();
-      if (file.size > 10 * 1024 * 1024) {
-        $("fileStatus").textContent = "Choose a document no larger than 10 MB.";
-        $("resumeFile").value = "";
-        return;
-      }
-      const allowed = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
-      if (!allowed.includes(file.type)) {
-        $("fileStatus").textContent = "Choose a PDF, JPG, PNG, or WebP document.";
-        $("resumeFile").value = "";
-        return;
-      }
-      resumeUrl = URL.createObjectURL(file);
-      $("fileStatus").textContent = file.name + " is ready to add to your portfolio preview.";
-      const preview = document.createElement(file.type === "application/pdf" ? "iframe" : "img");
-      preview.src = resumeUrl;
-      if (preview.tagName === "IFRAME") preview.title = "Local résumé preview";
-      else preview.alt = "Local document preview";
-      $("docPreview").append(preview);
-    });
+    $("resumeFile").addEventListener("change", () => importResumeFile($("resumeFile").files[0]));
 
     const reviewCard = $("reviewCard");
     let swipeStart = null;
@@ -2854,14 +2910,7 @@
       });
     });
 
-    updateCandidatePreview();
-    renderApplicantCard();
-    renderYesList();
-    renderFeedback();
-    renderManagerActivity();
-    renderApplicantFeedback();
-    renderProjectFeed();
-    initializeIntro();
   </script>
+  <script src="profile-controller.js"></script>
 </body>
 </html>

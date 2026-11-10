@@ -8,7 +8,9 @@ Forward is a browser-only prototype for two audiences: applicants building a pub
 
 - **Cinematic opener:** a full-screen Forward introduction reveals the product story before the role picker. It plays automatically for new visitors and can be replayed at any time with **Play intro** in the header or from the role chooser. The visitor chooses **Explore the experience** (or presses Escape) to transition into the app; it respects reduced-motion preferences and stores no profile or matching information.
 - **Applicant private intake:** before accessing the profile builder, applicants independently choose quiet focus time, group brainstorming, everyday communication, and team check-in preferences, alongside workload rhythm and company environment. Each new question includes a flexible option and requires an explicit choice. Answers stay out of the public profile and can be revised with **Edit private preferences**.
-- **Applicant workspace:** choose **Upload document** to preview a local PDF/image or **Build profile** to update a live public card with a name, role, location, skills, and introduction. Applicants can add their own JPG, PNG, or WebP profile image; PDFs become supporting documents instead. There is still no stock-photo bank or fake identity option.
+- **Résumé import:** choose **Upload document** and select a text-based PDF. The browser reads its pages and opens an editable review of name, role, location, email, phone, skills, introduction, previous jobs, education, and certifications/achievements. Select **Save résumé to my profile** to apply the nonempty reviewed fields and save the original document. Empty fields leave existing details unchanged; mission and culture stories are never invented from the résumé.
+- **Saved applicant profile:** form edits save automatically in IndexedDB, with an explicit **Save profile in this browser** action and a visible saved/error status. Profile fields, the original résumé, profile photo, work preferences, and launch state survive refresh and reopening in the same browser. One applicant profile is stored per browser; **Clear saved profile** removes it after confirmation. Clearing site data also removes it. There are no accounts or cross-device synchronization.
+- **Applicant workspace:** **Build profile** edits the imported details and public story. Previous jobs, education, and credentials appear in the live preview, launched hub, hiring card, and full story. Email and phone stay in the private editor. Own JPG/PNG/WebP photos are supported; uploaded images are attachments and do not autofill text. The builder starts blank instead of preloading a fictional applicant.
 - **Launch and applicant presence:** a draft stays out of the hiring pipeline until the applicant selects **Launch profile**. Launch opens an applicant-only activity hub with local manager activity, a feedback channel, and a separate Community & Projects page for project stories, images, PDF attachments, and awards.
 - **Mission and culture profile:** candidates can publicly share why they do their work, their professional values, how they support team well-being and colleagues, and a community contribution they are proud of. These people-centered story sections appear in the live preview, swipe card, and full public profile.
 - **Strong example profile:** the Alex Santos reference is always visible beside the workspace on wide screens and is the only profile that displays an illustrative image. It is a structural guide, not a competitive ranking.
@@ -20,6 +22,12 @@ Forward is a browser-only prototype for two audiences: applicants building a pub
 - **In-app chat simulation:** an interested applicant receives a Chat button. The drawer stores messages in browser memory and includes a sender selector so either side of the conversation can be demonstrated.
 
 ## Collaboration and iterative design
+
+### Fixing résumé import and saving
+
+Testing revealed that the earlier upload only displayed a PDF and that the profile disappeared on refresh. It did not extract jobs, qualifications, or other résumé information. The revised flow reads PDF text locally using self-hosted [PDF.js](https://mozilla.github.io/pdf.js/), presents an editable review, and saves the confirmed profile and file in this browser. The profile now has dedicated work-history, education, and credentials fields, so those details are available throughout the applicant and hiring views.
+
+PDF layouts vary, so users should check names, jobs, dates, and section boundaries before saving. The importer preserves all extracted text for reference and supports ordinary multi-page and common two-column layouts. Scanned/image-only PDFs need a text-based export or the **Paste résumé text** fallback; there is no OCR. Password-protected PDFs need an unlocked copy. Files are limited to 10 MB and 40 pages. Failed or cancelled imports leave the saved profile unchanged. A different detected name prompts a reminder to clear the old profile if the résumé belongs to someone else.
 
 ### Applying instructor feedback: working habits, not personality labels
 
@@ -33,7 +41,7 @@ Forward was shaped through an ongoing design-and-build conversation rather than 
 
 The collaboration kept the concept focused on a simple promise: a person should be able to tell a fuller story about their work, while a hiring team should have a clearer and more respectful way to decide whom to meet. The result is intentionally more human than a typical job board. It puts mission, values, team care, colleague support, community contribution, and project work beside skills and experience instead of treating them as afterthoughts.
 
-The project was also built around rapid, visible feedback. Each major request became a concrete interaction in the prototype: separate role experiences, better profile-building options, a clearer connection flow, an applicant launch moment, community posts, and a cinematic introduction. The site stays lightweight by using one HTML file with inline CSS and JavaScript, so every part of the experience can be opened, demonstrated, and revised quickly.
+The project was also built around rapid, visible feedback. Each major request became a concrete interaction in the prototype: separate role experiences, better profile-building options, a clearer connection flow, an applicant launch moment, community posts, and a cinematic introduction. The site uses static HTML, CSS, and JavaScript, with separate résumé-import and storage helpers and a self-hosted PDF library. It can be demonstrated and revised without a server application or build step.
 
 The early iterations also improved the small details that make a demo feel usable. For example, the candidate-review controls were refined so the left/right decision model works through both visible arrow buttons and swipe gestures. Resume previews, file-type checks, image/PDF handling, and removable profile media were added as the profile workflow became more realistic. These changes came from treating the prototype as something to test and improve, not just something to describe.
 
@@ -73,6 +81,7 @@ The warm editorial palette, cream background, generous white cards, charcoal typ
 | --- | --- | --- |
 | Applicants and hiring teams saw overlapping content. | Added a startup role picker and role-specific workspaces. | Each audience gets a focused path and a clearer purpose. |
 | A candidate could mainly drop in a document. | Added **Upload document** and **Build profile** paths with a live preview. | Applicants can choose between a familiar résumé/portfolio workflow and a more expressive web profile. |
+| Uploading a résumé only showed the file, and profile details disappeared on refresh. | Added local PDF text extraction, editable import review, work-history and education fields, and persistent browser storage. | Applicants can turn their résumé into a profile and return to their saved information later. |
 | Profiles emphasized title, skills, and background only. | Added mission, values, team care, colleague support, and community impact sections. | Hiring conversations can begin with values, contributions, and collaboration—not only credentials. |
 | No clear way to show personal presentation. | Added support for applicant-owned image, JPG, PNG, WebP, and PDF uploads; images become the live profile picture and PDFs become supporting documents. | The profile feels more personal while avoiding a bank of fake stock identities. |
 | Matching felt like a static card. | Added applicant and hiring-team intake flows; later replaced preference-based percentages with discussion prompts. | Differences can lead to practical working agreements without lowering anyone's review position. |
@@ -90,22 +99,22 @@ The warm editorial palette, cream background, generous white cards, charcoal typ
 - **Human judgment over automation:** Preferences start a conversation and never exclude an applicant. The profile story, review notes, and discussion remain central to the decision.
 - **A real product needs stronger infrastructure:** This prototype demonstrates the workflow. A production version would add authentication, consent, secure storage, permissions, real messaging and email services, file scanning, accessibility testing, and an audited matching system.
 
-This prototype does not upload documents, send email, create accounts, track real managers, publish social posts, or contact real people. Chosen files, intake answers, discussion topics, manager activity, feedback, project posts, and chat content stay in the current browser session and are cleared on refresh. This is a UI/workflow demonstration; a real secure product needs authentication, role-based access control, server-side storage, secure file handling, and consent controls. Work-preference prompts are suggestions, not assessments of job performance.
+This prototype does not upload documents to a server, send email, create accounts, track real managers, publish social posts, or contact real people. The applicant profile, résumé, photo, work preferences, and launch state persist in this browser. Hiring briefs, manager activity, feedback, community posts, and chat remain temporary demonstrations and clear on refresh. A service with shared accounts would need authentication, role-based access control, server-side storage, secure file handling, and consent controls. Work-preference prompts are suggestions, not assessments of job performance.
 
 ## Run locally
 
-Open `index.html` directly in a browser. No installation or build step is required.
+Use the published website or a local HTTP server. Direct `file://` opening can block the PDF worker and browser storage. No installation or build step is required; PDF.js 6.5.438 and its license are included in `vendor/pdfjs/`.
 
 Run the work-preference regression checks with Node.js (no dependencies):
 
 ```powershell
-node --test test-work-preferences.cjs
+node --test test-work-preferences.cjs test-resume-profile.cjs
 ```
 
 To run a local static preview server with Node.js (this also serves the local portrait image in `assets/`):
 
 ```powershell
-node -e "const http=require('http'),fs=require('fs'),path=require('path'),root=process.cwd(),types={'.html':'text/html; charset=utf-8','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp'};http.createServer((req,res)=>{const p=decodeURIComponent(new URL(req.url,'http://localhost').pathname),f=path.resolve(root,p==='/'?'index.html':'.'+p);if(f!==root&&!f.startsWith(root+path.sep)){res.writeHead(403);return res.end('Forbidden')}fs.readFile(f,(e,d)=>{res.writeHead(e?404:200,{'Content-Type':e?'text/plain':(types[path.extname(f)]||'application/octet-stream')});res.end(e?'Not found':d)})}).listen(8012)"
+node -e "const http=require('http'),fs=require('fs'),path=require('path'),root=process.cwd(),types={'.html':'text/html; charset=utf-8','.js':'text/javascript','.mjs':'text/javascript','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp'};http.createServer((req,res)=>{const p=decodeURIComponent(new URL(req.url,'http://localhost').pathname),f=path.resolve(root,p==='/'?'index.html':'.'+p);if(f!==root&&!f.startsWith(root+path.sep)){res.writeHead(403);return res.end('Forbidden')}fs.readFile(f,(e,d)=>{res.writeHead(e?404:200,{'Content-Type':e?'text/plain':(types[path.extname(f)]||'application/octet-stream')});res.end(e?'Not found':d)})}).listen(8012)"
 ```
 
 Then visit `http://localhost:8012`.
