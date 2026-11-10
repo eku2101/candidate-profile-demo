@@ -7,17 +7,25 @@ Forward is a browser-only prototype for two audiences: applicants building a pub
 ## Included interactions
 
 - **Cinematic opener:** a full-screen Forward introduction reveals the product story before the role picker. It plays automatically for new visitors and can be replayed at any time with **Play intro** in the header or from the role chooser. The visitor chooses **Explore the experience** (or presses Escape) to transition into the app; it respects reduced-motion preferences and stores no profile or matching information.
-- **Applicant private intake:** before accessing the profile builder, applicants set their work style, workload rhythm, and ideal company environment. Those values are kept out of the public profile and used only by the local matching model.
+- **Applicant private intake:** before accessing the profile builder, applicants independently choose quiet focus time, group brainstorming, everyday communication, and team check-in preferences, alongside workload rhythm and company environment. Each new question includes a flexible option and requires an explicit choice. Answers stay out of the public profile and can be revised with **Edit private preferences**.
 - **Applicant workspace:** choose **Upload document** to preview a local PDF/image or **Build profile** to update a live public card with a name, role, location, skills, and introduction. Applicants can add their own JPG, PNG, or WebP profile image; PDFs become supporting documents instead. There is still no stock-photo bank or fake identity option.
 - **Launch and applicant presence:** a draft stays out of the hiring pipeline until the applicant selects **Launch profile**. Launch opens an applicant-only activity hub with local manager activity, a feedback channel, and a separate Community & Projects page for project stories, images, PDF attachments, and awards.
 - **Mission and culture profile:** candidates can publicly share why they do their work, their professional values, how they support team well-being and colleagues, and a community contribution they are proud of. These people-centered story sections appear in the live preview, swipe card, and full public profile.
 - **Strong example profile:** the Alex Santos reference is always visible beside the workspace on wide screens and is the only profile that displays an illustrative image. It is a structural guide, not a competitive ranking.
-- **Hiring private intake:** before accessing the pipeline, managers and recruiters set the preferred experience level, team dynamics, workload rhythm, and environment for their role.
+- **Hiring private intake:** before accessing the pipeline, managers and recruiters describe their team's actual focus time, brainstorming, communication, and check-in habits, plus the role's experience level, workload rhythm, and environment. These are working conditions rather than personality labels.
 - **Compatibility signal:** the dashboard calculates and ranks each sample applicant with a percentage from the private applicant signals and private role brief. It displays only an aggregate signal—not raw answers—and labels it as a recommendation aid rather than an automated decision.
 - **Hiring workspace:** review ranked sample applicants with the left/right arrows or a horizontal swipe. The card prioritizes public mission, values, team care, colleague support, and community impact alongside expertise. Right creates a local “Yes — interested” connection; left saves structured feedback.
 - **In-app chat simulation:** an interested applicant receives a Chat button. The drawer stores messages in browser memory and includes a sender selector so either side of the conversation can be demonstrated.
 
 ## Collaboration and iterative design
+
+### Applying instructor feedback: working habits, not personality labels
+
+My professor pointed out that being introverted does not mean someone dislikes collaboration, and being extroverted does not mean someone dislikes independent focus. In response, I replaced the single introvert/extrovert work-style question with four independent questions about quiet focus time, group brainstorming, written or live communication, and check-in frequency. Someone can now ask for uninterrupted focus blocks and frequent brainstorming without choosing between those needs. The hiring brief asks parallel questions about how the team actually works, and both sides can choose flexible preferences.
+
+The local matching calculation now compares those four habits separately. Together they retain the previous work-style category's 22-point budget, split equally, so the extra questions do not increase the influence of working habits over the other inputs. Exact matches receive full points, flexible preferences receive partial points, and different preferences receive fewer points; no particular working style is inherently better. The aggregate explanation counts seven categories: experience, four working habits, workload, and environment. These are illustrative demo rules, not a validated prediction of job performance. Raw answers remain absent from public profiles.
+
+Regression checks cover mixed preferences, the independent effect of each habit, flexible choices, applicant-to-hiring matching, and re-ranking after changing a team brief. Browser checks confirmed required answers, saved-answer editing, the applicant launch flow, updated aggregate results, and form submission at a 390-pixel viewport. The existing upload and public-profile flows remain part of the prototype.
 
 Forward was shaped through an ongoing design-and-build conversation rather than a one-time handoff. The starting vision was a career platform that could support applicants, recruiters, and hiring managers while making people feel more visible than a traditional résumé allows. From there, the work followed a practical loop: identify what felt confusing or incomplete in the live prototype, refine the workflow, test the result in the browser, and keep the strongest ideas.
 
@@ -66,6 +74,7 @@ The warm editorial palette, cream background, generous white cards, charcoal typ
 | Profiles emphasized title, skills, and background only. | Added mission, values, team care, colleague support, and community impact sections. | Hiring conversations can begin with values, contributions, and collaboration—not only credentials. |
 | No clear way to show personal presentation. | Added support for applicant-owned image, JPG, PNG, WebP, and PDF uploads; images become the live profile picture and PDFs become supporting documents. | The profile feels more personal while avoiding a bank of fake stock identities. |
 | Matching felt like a static card. | Added private applicant and hiring-team intake flows plus a compatibility percentage. | The ranking has an understandable, private logic while keeping sensitive preference details out of the public profile. |
+| One work-style question linked introversion with independence and extroversion with collaboration. | Replaced it with independent focus, brainstorming, communication, and check-in preferences on both sides. | Reflects the professor's feedback: people can enjoy collaboration and quiet work, and matching should consider concrete working habits. |
 | Review had no decision feedback loop. | Added swipe/arrow review, an interest queue, structured pass reasons, and a simulated chat drawer. | The prototype demonstrates the full path from discovery to feedback and conversation. |
 | Applicants did not have a meaningful post-profile destination. | Added **Launch profile**, an applicant activity hub, feedback, manager-activity simulation, and a Community & Projects page. | Applicants can see a future-facing view of what happens after they publish and share work beyond the résumé. |
 | The landing experience opened directly into the app. | Added a cinematic, Apple-style **Forward** opener with an explicit enter action and replay controls. | The product starts with its mission and creates a smoother transition into the platform. |
@@ -84,6 +93,12 @@ This prototype does not upload documents, send email, create accounts, track rea
 ## Run locally
 
 Open `index.html` directly in a browser. No installation or build step is required.
+
+Run the work-preference regression checks with Node.js (no dependencies):
+
+```powershell
+node --test test-work-preferences.cjs
+```
 
 To run a local static preview server with Node.js (this also serves the local portrait image in `assets/`):
 

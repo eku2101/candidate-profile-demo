@@ -1348,7 +1348,7 @@
         <div>
           <div class="private-seal">✦ Private role brief</div>
           <h3 id="roleBriefTitle">Your role brief is guiding recommendations.</h3>
-          <p id="roleBriefCopy">Candidates are ranked with your saved experience, collaboration, workload, and environment criteria. Private candidate answers are never shown here.</p>
+          <p id="roleBriefCopy">Candidates are ranked with your saved experience, working habits, workload, and environment criteria. Private candidate answers are never shown here.</p>
         </div>
         <button class="button secondary" id="editHiringQuiz" type="button">Edit role brief</button>
       </article>
@@ -1451,13 +1451,42 @@
       <form class="quiz-form" id="applicantQuizForm">
         <fieldset>
           <legend>Your work preferences</legend>
+          <p class="help">You can enjoy group brainstorming and still need quiet focus time. Choose each preference independently; there is no ideal answer. You can change these later.</p>
           <div class="question-grid">
             <div>
-              <label for="applicantWorkStyle">Work style</label>
-              <select id="applicantWorkStyle" required>
-                <option value="independent">Mostly independent / introverted</option>
-                <option value="balanced">Balanced independent / collaborative</option>
-                <option value="collaborative">Highly collaborative / extroverted</option>
+              <label for="applicantFocus">Quiet focus time</label>
+              <select id="applicantFocus" required>
+                <option value="" disabled selected>Choose a preference</option>
+                <option value="protected">Regular uninterrupted blocks</option>
+                <option value="open">Short blocks between interactions</option>
+                <option value="flexible">Flexible — depends on the task</option>
+              </select>
+            </div>
+            <div>
+              <label for="applicantBrainstorming">Group brainstorming</label>
+              <select id="applicantBrainstorming" required>
+                <option value="" disabled selected>Choose a preference</option>
+                <option value="frequent">Frequent group idea sessions</option>
+                <option value="occasional">Occasional, when useful</option>
+                <option value="flexible">Flexible — depends on the task</option>
+              </select>
+            </div>
+            <div>
+              <label for="applicantCommunication">Everyday communication</label>
+              <select id="applicantCommunication" required>
+                <option value="" disabled selected>Choose a preference</option>
+                <option value="written">Written updates first</option>
+                <option value="live">Live conversations first</option>
+                <option value="flexible">A flexible mix of both</option>
+              </select>
+            </div>
+            <div>
+              <label for="applicantCheckIns">Check-ins with your team</label>
+              <select id="applicantCheckIns" required>
+                <option value="" disabled selected>Choose a preference</option>
+                <option value="frequent">Frequent, brief check-ins</option>
+                <option value="milestones">At milestones or when needed</option>
+                <option value="flexible">Flexible — depends on the task</option>
               </select>
             </div>
             <div>
@@ -1496,6 +1525,7 @@
       <form class="quiz-form" id="hiringQuizForm">
         <fieldset>
           <legend>Role preferences</legend>
+          <p class="help">Describe how your team works in practice. Quiet focus and group brainstorming can both be part of a working day. Choose each habit independently.</p>
           <div class="question-grid">
             <div>
               <label for="hiringExperience">Preferred experience level</label>
@@ -1507,11 +1537,39 @@
               </select>
             </div>
             <div>
-              <label for="hiringTeamStyle">Team dynamics</label>
-              <select id="hiringTeamStyle" required>
-                <option value="independent">Focused, mostly independent</option>
-                <option value="balanced" selected>Balanced independent / collaborative</option>
-                <option value="collaborative">Highly collaborative</option>
+              <label for="hiringFocus">Quiet focus time on this team</label>
+              <select id="hiringFocus" required>
+                <option value="" disabled selected>Choose a team habit</option>
+                <option value="protected">Regular uninterrupted blocks</option>
+                <option value="open">Short blocks between interactions</option>
+                <option value="flexible">Flexible — depends on the task</option>
+              </select>
+            </div>
+            <div>
+              <label for="hiringBrainstorming">Group brainstorming on this team</label>
+              <select id="hiringBrainstorming" required>
+                <option value="" disabled selected>Choose a team habit</option>
+                <option value="frequent">Frequent group idea sessions</option>
+                <option value="occasional">Occasional, when useful</option>
+                <option value="flexible">Flexible — depends on the task</option>
+              </select>
+            </div>
+            <div>
+              <label for="hiringCommunication">Everyday team communication</label>
+              <select id="hiringCommunication" required>
+                <option value="" disabled selected>Choose a team habit</option>
+                <option value="written">Written updates first</option>
+                <option value="live">Live conversations first</option>
+                <option value="flexible">A flexible mix of both</option>
+              </select>
+            </div>
+            <div>
+              <label for="hiringCheckIns">Team check-in rhythm</label>
+              <select id="hiringCheckIns" required>
+                <option value="" disabled selected>Choose a team habit</option>
+                <option value="frequent">Frequent, brief check-ins</option>
+                <option value="milestones">At milestones or when needed</option>
+                <option value="flexible">Flexible — depends on the task</option>
               </select>
             </div>
             <div>
@@ -1693,18 +1751,19 @@
       A real product would keep this data server-side behind authentication.
     */
     const privateApplicantSignals = {
-      alex: { experience: "senior", style: "collaborative", rhythm: "flexible", environment: "remote" },
-      jordan: { experience: "mid", style: "balanced", rhythm: "fast", environment: "startup" },
-      maya: { experience: "senior", style: "independent", rhythm: "steady", environment: "enterprise" },
-      sam: { experience: "mid", style: "independent", rhythm: "steady", environment: "remote" }
+      alex: { experience: "senior", focus: "protected", brainstorming: "frequent", communication: "written", checkIns: "milestones", rhythm: "flexible", environment: "remote" },
+      jordan: { experience: "mid", focus: "flexible", brainstorming: "frequent", communication: "live", checkIns: "frequent", rhythm: "fast", environment: "startup" },
+      maya: { experience: "senior", focus: "protected", brainstorming: "occasional", communication: "written", checkIns: "frequent", rhythm: "steady", environment: "enterprise" },
+      sam: { experience: "mid", focus: "protected", brainstorming: "occasional", communication: "flexible", checkIns: "milestones", rhythm: "steady", environment: "remote" }
     };
 
     const $ = id => document.getElementById(id);
     let activeRole = null;
     let applicantQuizComplete = false;
     let hiringQuizComplete = false;
-    let applicantPreferences = { style: "independent", rhythm: "steady", environment: "enterprise" };
-    let hiringCriteria = { experience: "senior", style: "balanced", rhythm: "flexible", environment: "remote" };
+    const workPreferenceKeys = ["focus", "brainstorming", "communication", "checkIns"];
+    let applicantPreferences = { rhythm: "steady", environment: "enterprise" };
+    let hiringCriteria = { experience: "senior", rhythm: "flexible", environment: "remote" };
     let rankedApplicants = publicApplicants.slice();
     let currentIndex = 0;
     let isAdvancing = false;
@@ -1912,9 +1971,7 @@
         */
         return {
           experience: "mid",
-          style: applicantPreferences.style,
-          rhythm: applicantPreferences.rhythm,
-          environment: applicantPreferences.environment
+          ...applicantPreferences
         };
       }
       return privateApplicantSignals[person.id];
@@ -2016,7 +2073,7 @@
 
     function openApplicantQuiz() {
       $("applicantQuizModal").hidden = false;
-      window.setTimeout(() => $("applicantWorkStyle").focus(), 0);
+      window.setTimeout(() => $("applicantFocus").focus(), 0);
     }
 
     function openHiringQuiz() {
@@ -2034,7 +2091,7 @@
     function renderRoleBrief() {
       if (!hiringQuizComplete) return;
       $("roleBriefTitle").textContent = "Your role brief is guiding recommendations.";
-      $("roleBriefCopy").textContent = "The pipeline is re-ranked using your saved experience, team dynamics, workload, and environment criteria. Private applicant answers are never exposed.";
+      $("roleBriefCopy").textContent = "The pipeline uses experience, quiet focus, brainstorming, communication, check-ins, workload, and environment. Preferences are a conversation starter, not a measure of ability. Private applicant answers are never exposed.";
     }
 
     function experiencePoints(candidate, target) {
@@ -2045,7 +2102,7 @@
 
     function preferencePoints(candidate, target, exact, flexible) {
       if (candidate === target) return exact;
-      if (candidate === "balanced" || target === "balanced" || candidate === "flexible" || target === "flexible") return flexible;
+      if (candidate === "flexible" || target === "flexible") return flexible;
       return Math.max(4, Math.round(flexible * .45));
     }
 
@@ -2063,17 +2120,20 @@
     function calculateCompatibility(person) {
       const privateProfile = getMatchingProfile(person);
       const experience = experiencePoints(privateProfile.experience, hiringCriteria.experience);
-      const style = preferencePoints(privateProfile.style, hiringCriteria.style, 22, 16);
+      // Keep the previous 22-point work-preference budget, split evenly across
+      // four independent habits so adding questions does not amplify their weight.
+      const workPreferences = workPreferenceKeys.map(key => preferencePoints(privateProfile[key], hiringCriteria[key], 22, 16));
+      const workPreferenceScore = workPreferences.reduce((total, points) => total + points, 0) / workPreferenceKeys.length;
       const rhythm = preferencePoints(privateProfile.rhythm, hiringCriteria.rhythm, 15, 11);
       const environment = environmentPoints(privateProfile.environment, hiringCriteria.environment);
-      const score = Math.max(48, Math.min(98, Math.round(20 + experience + style + rhythm + environment)));
-      const aligned = [
+      const categories = [
         experience >= 21,
-        style >= 16,
+        ...workPreferences.map(points => points >= 16),
         rhythm >= 11,
         environment >= 10
-      ].filter(Boolean).length;
-      return { score, aligned };
+      ];
+      const score = Math.max(48, Math.min(98, Math.round(20 + experience + workPreferenceScore + rhythm + environment)));
+      return { score, aligned: categories.filter(Boolean).length, total: categories.length };
     }
 
     function rankRemainingApplicants() {
@@ -2121,7 +2181,7 @@
       $("profileScore").textContent = compatibility.score + "% shared direction";
       $("fitScore").textContent = compatibility.score + "%";
       $("fitMeter").style.width = compatibility.score + "%";
-      $("fitNote").textContent = "Private signal: " + compatibility.aligned + " of 4 role-brief categories align.";
+      $("fitNote").textContent = "Private signal: " + compatibility.aligned + " of " + compatibility.total + " role-brief categories align.";
       const remaining = rankedApplicants.length - currentIndex;
       $("reviewCount").textContent = remaining + " applicant" + (remaining === 1 ? "" : "s") + " to review";
     }
@@ -2531,10 +2591,14 @@
       startIntro(true);
     });
 
+    function readWorkPreferences(role) {
+      return Object.fromEntries(workPreferenceKeys.map(key => [key, $(role + key[0].toUpperCase() + key.slice(1)).value]));
+    }
+
     $("applicantQuizForm").addEventListener("submit", event => {
       event.preventDefault();
       applicantPreferences = {
-        style: $("applicantWorkStyle").value,
+        ...readWorkPreferences("applicant"),
         rhythm: $("applicantRhythm").value,
         environment: $("applicantEnvironment").value
       };
@@ -2550,7 +2614,7 @@
       event.preventDefault();
       hiringCriteria = {
         experience: $("hiringExperience").value,
-        style: $("hiringTeamStyle").value,
+        ...readWorkPreferences("hiring"),
         rhythm: $("hiringRhythm").value,
         environment: $("hiringEnvironment").value
       };
