@@ -406,6 +406,15 @@
       font-size: .78rem;
       line-height: 1.5;
     }
+    .discussion-panel { padding: 28px; margin: 24px 0; }
+    .discussion-panel > summary { cursor: pointer; font-weight: 750; color: var(--accent-deep); }
+    .discussion-panel h3 { margin: 8px 0; font-size: 1.3rem; }
+    .discussion-context, .discussion-note { color: var(--ink-soft); font-size: .86rem; line-height: 1.6; }
+    .discussion-topic { margin-top: 12px; padding: 15px; background: var(--hover); border: 1px solid var(--line); border-radius: 12px; }
+    .discussion-topic summary { cursor: pointer; color: var(--ink); font-weight: 700; line-height: 1.5; }
+    .discussion-topic p { margin: 12px 0 0; font-size: .88rem; line-height: 1.65; overflow-wrap: anywhere; }
+    .discussion-topic .discussion-step { color: var(--ink-soft); font-size: .8rem; }
+    .match-panel .discussion-panel { margin: 24px 0 0; padding: 0; }
     .file-status {
       min-height: 22px;
       margin: 14px 0 0;
@@ -1015,7 +1024,7 @@
   <header class="hero">
     <p class="eyebrow" id="heroEyebrow">Private signals, human stories</p>
     <h1 id="heroTitle">Profiles built for the work—and the people behind it.</h1>
-    <p class="hero-copy" id="heroText">Forward pairs private matching with public stories about mission, care, and the communities people strengthen through their work.</p>
+    <p class="hero-copy" id="heroText">Forward pairs useful work conversations with public stories about mission, care, and the communities people strengthen through their work.</p>
   </header>
 
   <main class="workspace" id="applicantWorkspace" hidden>
@@ -1025,17 +1034,22 @@
           <p class="eyebrow">Candidate workspace</p>
           <h2>Build a public profile, keep your matching preferences private.</h2>
         </div>
-        <span class="count">Private matching enabled</span>
+        <span class="count">Discussion prompts ready</span>
       </div>
 
       <article class="card private-summary">
         <div>
           <div class="private-seal">✦ Private matching profile</div>
           <h3 id="applicantMatchTitle">Your matching preferences are protected.</h3>
-          <p id="applicantMatchCopy">Your work-style answers help calculate recommendations in the background. They do not appear in this profile, your document preview, or public conversations.</p>
+          <p id="applicantMatchCopy">Your preferences help prepare discussion topics. Differences never lower your place in the review queue or exclude you. Your selected answers stay off your public profile.</p>
         </div>
         <button class="button secondary" id="editApplicantQuiz" type="button">Edit private preferences</button>
       </article>
+
+      <details class="card discussion-panel">
+        <summary>Prepare for a conversation about how you work</summary>
+        <div id="applicantDiscussion"></div>
+      </details>
 
       <div class="candidate-layout">
         <article class="card build-card">
@@ -1240,6 +1254,8 @@
         <button class="button secondary" id="openCommunityPage" type="button">Community &amp; projects →</button>
       </article>
 
+      <article class="card discussion-panel" id="applicantLiveDiscussion" aria-label="Discussion prompts for applicants"></article>
+
       <div class="applicant-hub-grid">
         <article class="card live-profile-card">
           <p class="eyebrow">Live profile</p>
@@ -1348,7 +1364,7 @@
         <div>
           <div class="private-seal">✦ Private role brief</div>
           <h3 id="roleBriefTitle">Your role brief is guiding recommendations.</h3>
-          <p id="roleBriefCopy">Candidates are ranked with your saved experience, working habits, workload, and environment criteria. Private candidate answers are never shown here.</p>
+          <p id="roleBriefCopy">Review order uses experience level only. Working preferences suggest conversation topics and never exclude an applicant.</p>
         </div>
         <button class="button secondary" id="editHiringQuiz" type="button">Edit role brief</button>
       </article>
@@ -1365,7 +1381,7 @@
               <p class="role" id="appRole">Product Designer</p>
               <span class="location" id="appLocation">Brooklyn, NY · Portfolio uploaded</span>
             </div>
-            <span class="match-badge" id="profileScore">82% shared direction</span>
+            <span class="match-badge" id="profileScore">Experience context</span>
           </div>
           <p class="eyebrow">Profile story</p>
           <p class="summary" id="appSummary"></p>
@@ -1396,15 +1412,15 @@
         </article>
 
         <aside class="card match-panel">
-          <p class="eyebrow">Shared-direction signal</p>
-          <h3>Start with a reason to connect.</h3>
-          <p>A private, background signal can guide who to meet first. The public story is where values, expertise, and human connection come into view.</p>
+          <p class="eyebrow">A conversation worth having</p>
+          <h3>Explore how you could work together.</h3>
+          <p>Different preferences can lead to a useful working agreement. Everyone remains available for review.</p>
           <div class="match-box">
-            <div class="match-row"><span>Shared direction</span><b id="fitScore">82%</b></div>
-            <div class="meter"><i id="fitMeter" style="width:82%"></i></div>
-            <small id="fitNote">Private signal: role needs and candidate preferences align.</small>
+            <div class="match-row"><span>Experience in this demo</span><b id="fitScore">Senior level</b></div>
+            <small id="fitNote">Work preferences do not affect review order.</small>
           </div>
-          <p class="matching-disclaimer">The dashboard shows only an aggregate percentage. It never reveals an applicant's private quiz answers.</p>
+          <div class="discussion-panel" id="hiringDiscussion" aria-label="Discussion prompts for employers"></div>
+          <p class="matching-disclaimer">Suggested topics may indicate where preferences differ. Selected answers stay out of public profiles. Nothing is sent automatically.</p>
         </aside>
       </div>
     </section>
@@ -1427,7 +1443,7 @@
     <article class="dialog">
       <p class="eyebrow">Welcome to Forward</p>
       <h2 id="roleModalTitle">How are you joining today?</h2>
-      <p>Each role starts with a private intake so that public profiles stay focused and matching signals work in the background.</p>
+      <p>Each role starts with work preferences. Differences suggest helpful discussion topics and never exclude someone from review.</p>
       <button class="link-button intro-replay-modal" id="replayIntroFromRole" type="button">Play the intro again</button>
       <div class="roles">
         <button class="role-button" data-role="applicant" type="button">
@@ -1436,7 +1452,7 @@
         </button>
         <button class="role-button" data-role="hiring" type="button">
           <b>I'm hiring</b>
-          <span>Set a private role brief, then review compatible applicants.</span>
+          <span>Set a role brief, then explore applicants and discussion topics.</span>
         </button>
       </div>
     </article>
@@ -1446,8 +1462,8 @@
     <article class="dialog">
       <p class="eyebrow">Step 1 · Private matching profile</p>
       <h2 id="applicantQuizTitle">What helps you do your best work?</h2>
-      <p>These answers support background recommendations. They do not appear on your public profile or as a form for hiring teams to read.</p>
-      <div class="privacy-notice"><b>Private in this demo:</b> answers stay in this browser session and are used only in local matching logic. A production app would protect them with authenticated server-side storage.</div>
+      <p>These answers prepare helpful conversation topics. Different preferences never lower your ranking or exclude you.</p>
+      <div class="privacy-notice"><b>Your choice:</b> answers stay in this browser session and off your public profile. Suggested topics may show where preferences differ; the other side does not see your selected answers. You choose what to discuss.</div>
       <form class="quiz-form" id="applicantQuizForm">
         <fieldset>
           <legend>Your work preferences</legend>
@@ -1520,8 +1536,8 @@
     <article class="dialog">
       <p class="eyebrow">Step 1 · Private role brief</p>
       <h2 id="hiringQuizTitle">What does this team need next?</h2>
-      <p>Set the background signals you want Forward to consider. Candidates see only a compatibility result—not this private role brief.</p>
-      <div class="privacy-notice"><b>Private in this demo:</b> these choices stay in this browser session and rank sample profiles locally. A production app would use authenticated, server-side matching.</div>
+      <p>Describe your team's working habits so both sides can explore practical ways to work together. Review order uses experience level only.</p>
+      <div class="privacy-notice"><b>Your choice:</b> answers stay in this browser session. Both sides receive suggested discussion topics when preferences differ, while selected answers stay off public profiles. Nothing is sent automatically.</div>
       <form class="quiz-form" id="hiringQuizForm">
         <fieldset>
           <legend>Role preferences</legend>
@@ -1598,7 +1614,7 @@
           </div>
         </fieldset>
         <div class="dialog-actions">
-          <button class="submit" type="submit">Rank applicant pipeline</button>
+          <button class="submit" type="submit">Explore applicants &amp; conversations</button>
         </div>
       </form>
     </article>
@@ -1762,6 +1778,34 @@
     let applicantQuizComplete = false;
     let hiringQuizComplete = false;
     const workPreferenceKeys = ["focus", "brainstorming", "communication", "checkIns"];
+    const discussionTopics = [
+      { key: "focus", title: "Quiet focus time",
+        applicant: "Could we protect focus blocks and agree on a channel for urgent questions?",
+        hiring: "What uninterrupted time helps you do your best work, and how could we handle urgent requests together?",
+        step: "Try shared focus blocks with a clearly agreed urgent-contact channel." },
+      { key: "brainstorming", title: "Group brainstorming",
+        applicant: "Could I contribute ideas in writing before a group session, and join the sessions where collaboration is most useful?",
+        hiring: "What balance of group idea sessions and individual preparation helps you contribute?",
+        step: "Share a short agenda in advance and offer both written input and live discussion." },
+      { key: "communication", title: "Everyday communication",
+        applicant: "Could we use written updates for routine work and short conversations for decisions that need discussion?",
+        hiring: "Which updates work best in writing for you, and when would a live conversation be helpful?",
+        step: "Agree on a default update channel and summarize decisions in writing." },
+      { key: "checkIns", title: "Team check-ins",
+        applicant: "Could we agree on a check-in schedule that gives me support and enough time to work independently?",
+        hiring: "How often would a check-in feel useful, and how can we make it easy to ask for help between meetings?",
+        step: "Try a check-in rhythm for two weeks, then revisit it together." },
+      { key: "rhythm", title: "Workload rhythm",
+        applicant: "How predictable are priorities, and could we agree on how to handle changes and busy periods?",
+        hiring: "What helps you manage changing priorities, and what planning or notice would support you?",
+        step: "Set a regular priorities review and explain how urgent work will be handled." },
+      { key: "environment", title: "Team environment",
+        applicant: "Which parts of the team's size, structure, or work arrangement are flexible, and what is essential for this role?",
+        hiring: "What environment helps you thrive, and which parts of our team's setup could we adapt together?",
+        step: "Clarify the actual team setup and explore practical adjustments without promising changes that are unavailable." }
+    ];
+    const sampleDiscussionTeam = { focus: "open", brainstorming: "frequent", communication: "live", checkIns: "frequent", rhythm: "flexible", environment: "remote" };
+    const experienceLabels = { entry: "Entry level", mid: "Mid level", senior: "Senior level", lead: "Lead or principal" };
     let applicantPreferences = { rhythm: "steady", environment: "enterprise" };
     let hiringCriteria = { experience: "senior", rhythm: "flexible", environment: "remote" };
     let rankedApplicants = publicApplicants.slice();
@@ -1981,7 +2025,7 @@
       if (role === "applicant") {
         $("heroEyebrow").textContent = "Private preferences, public purpose";
         $("heroTitle").textContent = "Let people connect with the work behind your why.";
-        $("heroText").textContent = "Your work-style preferences guide matching privately while your public profile tells the story of your values, care, and impact.";
+        $("heroText").textContent = "Your preferences help start useful conversations while your public profile tells the story of your values, care, and impact.";
       } else {
         $("heroEyebrow").textContent = "Private role brief, human connection";
         $("heroTitle").textContent = "Meet the person behind the portfolio.";
@@ -2082,16 +2126,18 @@
     }
 
     function renderApplicantPrivacyStatus() {
-      $("applicantMatchTitle").textContent = applicantQuizComplete ? "Your matching preferences are protected." : "Complete your private matching profile.";
+      $("applicantMatchTitle").textContent = applicantQuizComplete ? "Your preferences open a conversation." : "Complete your private work preferences.";
       $("applicantMatchCopy").textContent = applicantQuizComplete
-        ? "Your work-style answers help calculate recommendations in the background. They do not appear in this profile, your document preview, or public conversations."
-        : "Complete the intake quiz to allow private background matching.";
+        ? "Differences never lower your place in the review queue or exclude you. Suggested topics help both sides explore working together; your selected answers stay off your public profile."
+        : "Complete the intake to prepare helpful discussion topics.";
+      renderApplicantDiscussions();
     }
 
     function renderRoleBrief() {
       if (!hiringQuizComplete) return;
       $("roleBriefTitle").textContent = "Your role brief is guiding recommendations.";
-      $("roleBriefCopy").textContent = "The pipeline uses experience, quiet focus, brainstorming, communication, check-ins, workload, and environment. Preferences are a conversation starter, not a measure of ability. Private applicant answers are never exposed.";
+      $("roleBriefCopy").textContent = "Review order uses experience level only. Focus, brainstorming, communication, check-ins, workload, and environment suggest conversation topics. Differences never lower an applicant's ranking or exclude them.";
+      renderApplicantDiscussions();
     }
 
     function experiencePoints(candidate, target) {
@@ -2100,46 +2146,72 @@
       return [28, 21, 13, 6][Math.min(difference, 3)];
     }
 
-    function preferencePoints(candidate, target, exact, flexible) {
-      if (candidate === target) return exact;
-      if (candidate === "flexible" || target === "flexible") return flexible;
-      return Math.max(4, Math.round(flexible * .45));
+    function experienceRank(person) {
+      // Preferences are deliberately excluded from ranking and eligibility.
+      return experiencePoints(getMatchingProfile(person).experience, hiringCriteria.experience);
     }
 
-    function environmentPoints(candidate, target) {
-      if (candidate === target) return 15;
-      const adjacent = (candidate === "enterprise" && target === "mid") ||
-        (candidate === "mid" && target === "enterprise") ||
-        (candidate === "small" && target === "startup") ||
-        (candidate === "startup" && target === "small") ||
-        (candidate === "remote" && target === "small") ||
-        (candidate === "small" && target === "remote");
-      return adjacent ? 10 : 5;
+    function getDiscussionPrompts(applicant, team, role) {
+      return discussionTopics.filter(topic => {
+        const candidateChoice = applicant?.[topic.key];
+        const teamChoice = team?.[topic.key];
+        return candidateChoice && teamChoice && candidateChoice !== teamChoice &&
+          candidateChoice !== "flexible" && teamChoice !== "flexible";
+      }).map(topic => ({ key: topic.key, title: topic.title, question: topic[role], step: topic.step }));
     }
 
-    function calculateCompatibility(person) {
-      const privateProfile = getMatchingProfile(person);
-      const experience = experiencePoints(privateProfile.experience, hiringCriteria.experience);
-      // Keep the previous 22-point work-preference budget, split evenly across
-      // four independent habits so adding questions does not amplify their weight.
-      const workPreferences = workPreferenceKeys.map(key => preferencePoints(privateProfile[key], hiringCriteria[key], 22, 16));
-      const workPreferenceScore = workPreferences.reduce((total, points) => total + points, 0) / workPreferenceKeys.length;
-      const rhythm = preferencePoints(privateProfile.rhythm, hiringCriteria.rhythm, 15, 11);
-      const environment = environmentPoints(privateProfile.environment, hiringCriteria.environment);
-      const categories = [
-        experience >= 21,
-        ...workPreferences.map(points => points >= 16),
-        rhythm >= 11,
-        environment >= 10
-      ];
-      const score = Math.max(48, Math.min(98, Math.round(20 + experience + workPreferenceScore + rhythm + environment)));
-      return { score, aligned: categories.filter(Boolean).length, total: categories.length };
+    function renderDiscussionPanel(id, role, applicant, team, context) {
+      const host = $(id);
+      host.replaceChildren();
+      const heading = document.createElement("h3");
+      heading.textContent = role === "applicant" ? "Questions you can ask the team" : "Questions you can ask the applicant";
+      const note = document.createElement("p");
+      note.className = "discussion-context";
+      note.textContent = context;
+      host.append(heading, note);
+      const prompts = getDiscussionPrompts(applicant, team, role);
+      if (!prompts.length) {
+        const shared = document.createElement("p");
+        shared.className = "discussion-note";
+        shared.textContent = "No specific differences surfaced in the answered questions. Flexible preferences leave room to agree together. Ask: What would a good first week look like, and when should we revisit how we work together?";
+        host.append(shared);
+      }
+      prompts.forEach((prompt, index) => {
+        const item = document.createElement("details");
+        item.className = "discussion-topic";
+        item.open = index === 0;
+        const title = document.createElement("summary");
+        title.textContent = prompt.title;
+        const question = document.createElement("p");
+        question.className = "discussion-question";
+        question.textContent = prompt.question;
+        const step = document.createElement("p");
+        step.className = "discussion-step";
+        step.textContent = "Possible next step: " + prompt.step;
+        item.append(title, question, step);
+        host.append(item);
+      });
+      const choice = document.createElement("p");
+      choice.className = "discussion-note";
+      choice.textContent = "Choose what you want to discuss. Differences do not affect review order or eligibility. These are optional prompts; nothing is sent automatically.";
+      host.append(choice);
+    }
+
+    function renderApplicantDiscussions() {
+      if (!applicantQuizComplete) return;
+      const team = hiringQuizComplete ? hiringCriteria : sampleDiscussionTeam;
+      const context = hiringQuizComplete
+        ? "For your conversation with " + (safeText($("hiringTeamName").value) || "the hiring team") + " — the role brief entered in this local demo. Suggested topics do not reveal the team's selected answers."
+        : "Practice with a sample team. These prompts use an example brief, not a real employer or an expression of interest.";
+      ["applicantDiscussion", "applicantLiveDiscussion"].forEach(id => {
+        renderDiscussionPanel(id, "applicant", applicantPreferences, team, context);
+      });
     }
 
     function rankRemainingApplicants() {
       const reviewed = rankedApplicants.slice(0, currentIndex);
       const remaining = rankedApplicants.slice(currentIndex).sort((first, second) => {
-        return calculateCompatibility(second).score - calculateCompatibility(first).score;
+        return experienceRank(second) - experienceRank(first);
       });
       rankedApplicants = reviewed.concat(remaining);
     }
@@ -2163,9 +2235,12 @@
       if (!person) {
         $("reviewCard").innerHTML = '<div class="profile-top"><div class="candidate-avatar">✓</div><div><h3>You are all caught up.</h3><p class="role">All sample applicants have been reviewed.</p></div></div>';
         $("reviewCount").textContent = "Review complete";
+        $("hiringDiscussion").replaceChildren();
+        $("fitScore").textContent = "—";
+        $("fitNote").textContent = "Everyone has been reviewed. No applicant was automatically excluded by their preferences.";
         return;
       }
-      const compatibility = calculateCompatibility(person);
+      const experience = getMatchingProfile(person).experience;
       renderAvatar("appAvatar", "appProfileImage", "appInitials", person.name, person.imageUrl);
       $("appName").textContent = person.name;
       $("appRole").textContent = person.role;
@@ -2178,10 +2253,11 @@
         return tag;
       }));
       renderPublicStory("app", person);
-      $("profileScore").textContent = compatibility.score + "% shared direction";
-      $("fitScore").textContent = compatibility.score + "%";
-      $("fitMeter").style.width = compatibility.score + "%";
-      $("fitNote").textContent = "Private signal: " + compatibility.aligned + " of " + compatibility.total + " role-brief categories align.";
+      $("profileScore").textContent = person.id === "avery" ? "Demo experience baseline" : experienceLabels[experience];
+      $("fitScore").textContent = experienceLabels[experience];
+      $("fitNote").textContent = "Role brief: " + experienceLabels[hiringCriteria.experience] + ". Review order uses experience only; working preferences never lower it." + (person.id === "avery" ? " Applicant-built profiles use a mid-level demo baseline." : "");
+      renderDiscussionPanel("hiringDiscussion", "hiring", getMatchingProfile(person), hiringCriteria,
+        "For a conversation with " + person.name + ". Explore the topics together; no selected answers are shown.");
       const remaining = rankedApplicants.length - currentIndex;
       $("reviewCount").textContent = remaining + " applicant" + (remaining === 1 ? "" : "s") + " to review";
     }
@@ -2324,6 +2400,7 @@
     function renderApplicantLiveHub() {
       const person = getInteractiveApplicant();
       if (!person) return;
+      renderApplicantDiscussions();
       renderAvatar("liveAvatar", "liveProfileImage", "liveInitials", person.name, person.imageUrl);
       $("liveName").textContent = person.name;
       $("liveRole").textContent = person.role;
@@ -2625,7 +2702,7 @@
         $("hiringWorkspace").hidden = false;
         renderApplicantCard();
         renderRoleBrief();
-        showToast("Role brief saved. The compatibility pipeline was re-ranked.");
+        showToast("Role brief saved. Discussion topics updated; preferences never reduce an applicant's ranking.");
       }
     });
 
