@@ -109,6 +109,20 @@ test('community media is private until every attachment is uploaded and only its
   assert.equal((await as(m,media)).rows.length,0);
   assert.equal((await as(a,'delete from storage.objects returning name')).rows.length,2);
 });
+test('fictional community posts accept shared reactions without creating a fictional member account',async()=>{
+  await setupApplicant();await setupManager();
+  const example='bf000000-0000-4000-8000-000000000001';
+  await db.exec('reset role');
+  await db.query(`insert into public.forward_community_posts
+    (id,author_id,author_name,caption,extensions,descriptions,published_at)
+    values($1,null,'Jordan Reyes','Workshop recap',array['jpg'],array['Workshop photo'],now())`,[example]);
+  await as(a,'insert into public.forward_community_likes(post_id) values($1)',[example]);
+  await as(m,`insert into public.forward_community_comments(post_id,author_name,body)
+    values($1,'Morgan','Thanks for sharing the workshop recap.')`,[example]);
+  const result=await as(a,'select * from public.forward_community_engagement(array[$1::uuid])',[example]);
+  assert.deepEqual(result.rows,[{post_id:example,like_count:1,comment_count:1,liked:true}]);
+  assert.equal((await as(a,'delete from public.forward_community_posts where id=$1 returning id',[example])).rows.length,0);
+});
 test('a share stays private, pass is hidden, and only a mutual match can chat',async()=>{
   await setupApplicant();
   await setupApplicant(b);

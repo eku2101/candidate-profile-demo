@@ -1,8 +1,8 @@
 import {accountConfig} from './config.js?v=public-signup-1';
 import '../demo-applicants.js?v=expert-demo-1';
 import {configReady,applicantFields,hiringBackgroundFields,hiringResumeFields,questions,questionLabels,normalizeApplicant,normalizeImages,applicantIssues,importReviewedFields,wordCount,discussionPrompts} from './model.mjs?v=hiring-resume-1';
-import {createAccountAPI} from './api.mjs?v=community-engagement-1';
-import {mountCommunity} from './community.mjs?v=community-engagement-1';
+import {createAccountAPI} from './api.mjs?v=example-reactions-1';
+import {mountCommunity} from './community.mjs?v=example-reactions-1';
 import {validateAuthInput,submitAuthentication,authErrorMessage,newPasswordError} from './auth-flow.mjs?v=public-signup-1';
 import {installHelpChat} from './help-chat.mjs?v=vera-portrait-1';
 const $=id=>document.getElementById(id);
@@ -1401,7 +1401,16 @@ async function handleSession(session,event){
   if(event==='PASSWORD_RECOVERY'||recovery){recovery=true;showPage('recoveryPage');return;}
   const found=await api.account(user.id);if(epoch!==sessionEpoch)return;account=found;
   if(!account){showPage('rolePage');return;}
-  if(!await loadOwned())return;step=draft.resumeId?1:0;route='profile';renderNav();renderEditor();watchFeedback();watchMessageAlerts();
+  if(!await loadOwned())return;
+  step=draft.resumeId?1:0;
+  route=new URLSearchParams(location.search).get('view')==='community'?'community':'profile';
+  renderNav();
+  if(route==='community'){
+    showPage('workspace');
+    renderCommunity();
+  }else renderEditor();
+  watchFeedback();
+  watchMessageAlerts();
 }
 async function initialize(){
   if(!configReady(accountConfig)){showPage('setupNotice');return;}

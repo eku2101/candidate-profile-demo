@@ -39,18 +39,18 @@ function examplePosts(){
   });
   return [
     {
-      author_name:jordan.name,byline:jordan.role,example:true,
+      id:'bf000000-0000-4000-8000-000000000001',author_name:jordan.name,byline:jordan.role,example:true,
       caption:'Our workshop planning team tried something small: everyone wrote down one idea before we discussed them. New facilitators had more room to contribute, and we left with a clearer plan for our volunteer instructors.',
       media:[photo(jordan),{src:'assets/demo-applicant-project.jpg',description:'Workshop planning materials and facilitator cards on a table.',type:'photo'},
         {src:'assets/demo-workshop-recap.mp4',description:'Short photo montage from the fictional workshop planning meeting.',type:'video'}]
     },
     {
-      author_name:amina.name,byline:amina.role,example:true,
+      id:'bf000000-0000-4000-8000-000000000002',author_name:amina.name,byline:amina.role,example:true,
       caption:'At the community infrastructure conference, my colleagues and I compared ways to make public meetings easier to attend. My favorite idea was a phone option for people who couldn’t use the online map.',
       media:[photo(amina)]
     },
     {
-      author_name:mateo.name,byline:mateo.role,example:true,
+      id:'bf000000-0000-4000-8000-000000000003',author_name:mateo.name,byline:mateo.role,example:true,
       caption:'Our year-end gathering brought the day and evening shifts together. We shared food and thanked the people whose quiet work keeps our repair program running.',
       media:[photo(mateo)]
     }
@@ -466,7 +466,7 @@ export function mountCommunity({host,api,authorId,authorName,dialog,dialogElemen
       observer.observe(cover);
     }
     card.append(byline,cover,element('p',post.caption,'profile-text community-caption'));
-    if(!post.example)card.append(postEngagement(post));
+    card.append(postEngagement(post));
     if(post.author_id===authorId)card.append(button('Remove post',()=>deletePost(post)));
     return card;
   }
