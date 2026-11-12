@@ -32,7 +32,7 @@ export function createAccountAPI(client) {
     chatStarter:id=>checked(client.rpc('forward_chat_starter',{p_connection_id:id})),
     messageUpdates:()=>checked(client.rpc('forward_message_updates')),
     listCommunityPosts:authorId=>{
-      const query=client.from('forward_community_posts').select('*').not('published_at','is',null)
+      const query=client.from('forward_community_posts').select('*').not('published_at','is',null).not('author_id','is',null)
         .order('published_at',{ascending:false}).order('id',{ascending:false}).limit(24);
       return checked(authorId?query.eq('author_id',authorId):query);
     },
