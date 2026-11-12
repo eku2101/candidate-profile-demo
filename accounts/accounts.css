@@ -13,6 +13,9 @@
 .resume-upload { border: 1px solid #d8cbed; }
 .resume-upload input[type=file] { margin-bottom: 12px; }
 .resume-upload details { background: #fff; }
+.profile-views { display: grid; gap: 12px; list-style: none; padding: 0; margin-top: 18px; }
+.profile-views .panel { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 0; padding: 16px 20px; }
+.profile-views time { margin-left: auto; color: var(--muted); font-size: .8rem; }
 .deck-toolbar label { margin: 0; }
 .deck-toolbar select { width: auto; min-width: 140px; }
 .applicant-deck { max-width: 720px; }
