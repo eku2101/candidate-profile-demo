@@ -1183,7 +1183,20 @@ async function initialize(){
   if(!configReady(accountConfig)){showPage('setupNotice');return;}
   $('accountPreview').hidden=accountConfig.showAccountEntry!==false;
   const {createClient}=await import('./vendor/supabase.js');
-  client=createClient(accountConfig.supabaseUrl,accountConfig.publishableKey,{auth:{storage:sessionStorage,persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'implicit',storageKey:'forward-account-session'}});api=createAccountAPI(client);
+  // Supabase uses storageKey for both browser storage and its cross-tab auth channel.
+  // Give each page a separate channel while keeping the existing per-tab session on reload.
+  const sessionKey='forward-account-session';
+  const storageKey=sessionKey+'-'+crypto.randomUUID();
+  const sessionStorageKey=key=>key.startsWith(storageKey)?sessionKey+key.slice(storageKey.length):key;
+  const storage={
+    getItem:key=>sessionStorage.getItem(sessionStorageKey(key)),
+    setItem:(key,value)=>sessionStorage.setItem(sessionStorageKey(key),value),
+    removeItem:key=>sessionStorage.removeItem(sessionStorageKey(key))
+  };
+  client=createClient(accountConfig.supabaseUrl,accountConfig.publishableKey,{
+    auth:{storage,storageKey,persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'implicit'}
+  });
+  api=createAccountAPI(client);
   if(new URLSearchParams(location.search).get('mode')==='signup')setAuthMode('signup');
   $('signInTab').addEventListener('click',()=>setAuthMode('signin'));$('signUpTab').addEventListener('click',()=>setAuthMode('signup'));
   const returnURL=new URL('accounts.html',location.href).href;
