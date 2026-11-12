@@ -1,4 +1,4 @@
-import {accountConfig} from './config.js';
+import {accountConfig} from './config.js?v=public-signup-1';
 import {configReady} from './model.mjs';
 
 function accountLink(id,label,href,style){
