@@ -7,7 +7,8 @@ const model=require('./profile-model.js');
 const fields=require('./resume-tools.js').fields;
 const html=fs.readFileSync(path.join(__dirname,'index.html'),'utf8');
 const appScript=html.match(/<script>([\s\S]*?)<\/script>/)[1];
-const appModel=appScript.slice(0,appScript.indexOf('    document.querySelectorAll(".role-button")'));
+const profiles=fs.readFileSync(path.join(__dirname,'demo-applicants.js'),'utf8');
+const appModel=profiles+'\n'+appScript.slice(0,appScript.indexOf('    document.querySelectorAll(".role-button")'));
 function applicantHarness() {
   const inputs=Object.fromEntries(fields.map(key=>['profile'+key[0].toUpperCase()+key.slice(1)+'Input',{value:''}]));
   inputs.profileNameInput.value='Riley Park';

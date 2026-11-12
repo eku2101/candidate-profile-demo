@@ -1,4 +1,5 @@
 import {accountConfig} from './config.js?v=public-signup-1';
+import '../demo-applicants.js?v=expert-demo-1';
 import {configReady,applicantFields,hiringBackgroundFields,hiringResumeFields,questions,questionLabels,normalizeApplicant,normalizeImages,applicantIssues,importReviewedFields,wordCount,discussionPrompts} from './model.mjs?v=hiring-resume-1';
 import {createAccountAPI} from './api.mjs?v=message-alerts-1';
 import {validateAuthInput,submitAuthentication,authErrorMessage,newPasswordError} from './auth-flow.mjs?v=public-signup-1';
@@ -61,7 +62,7 @@ function renderApplicantStory(host,profile){
   identity.append(node('h2',profile.name||'Your name'),node('p',[profile.role,profile.location].filter(Boolean).join(' · '),'card-meta'));
   prependPortrait(identity,profile);
   host.append(identity,node('p',profile.summary||'Add your introduction.','profile-lead profile-text'));
-  appendShowcase(host,profile,'Project image');
+  appendShowcase(host,profile,profile.demoImages?.caption||'Project image');
   for(const role of profile.featuredRoles||[])if(role.title.trim()){const section=node('section',undefined,'notice');section.append(node('h3',role.title),node('p',role.dates,'help'),node('p',role.summary,'profile-text'));host.append(section);}
   for(const key of Object.keys(applicantFields).filter(k=>!['name','role','location','summary','email','phone'].includes(k)))if(profile[key]){const section=node('details');section.append(node('summary',applicantFields[key].label),node('p',profile[key],'profile-text'));host.append(section);}
 }
@@ -277,48 +278,21 @@ function renderEditor(){
   const actions=node('div',undefined,'actions');if(step>0)actions.append(button('← Back',()=>{step--;renderEditor();}));if(step<labels.length-1)actions.append(button('Continue →',()=>{if(step===0){const answers=account.role==='applicant'?draft.preferences:draft.answers;const missing=Object.keys(answers).find(k=>!answers[k]);if(missing){$('answer-'+missing).focus();throw new Error('Choose an answer to each question. Different preferences are welcome.');}}step++;renderEditor();},'primary'));panel.append(actions);host.append(panel);
   const strip=node('div',undefined,'save-strip');strip.append(node('p','Drafts are private until you choose to share.','help'));const controls=node('div',undefined,'actions');controls.append(button('Save private draft',saveDraft,'primary'));strip.append(controls);host.append(strip);updateSaveStatus();
 }
-const exampleApplicants=[
-  {
-      name:'Casey Park',
-      role:'Learning Experience Designer',
-      location:'New York, NY',
-      demoImages:{portrait:'demo-applicant-portrait.jpg',showcase:'demo-applicant-project.jpg',alt:'A tablet and facilitator cards from a volunteer onboarding project.'},
-      summary:'I turn complex processes into clear learning materials. I work with subject experts, test drafts with learners, and revise based on what people get stuck on.',
-      skills:'Instructional design, learner interviews, accessibility, usability testing',
-      featuredRoles:[
-        {title:'Learning Designer · Harbor Learning Lab',dates:'2024–present',summary:'Redesigned volunteer onboarding using learner interviews and a short pilot. Completion rose from 68% to 84% over the next two cohorts.'},
-        {title:'Program Assistant · Northside Community Workshop',dates:'2022–2024',summary:'Created a plain-language facilitator guide that helped new volunteers run their first workshop.'}
-      ],
-      experience:'Learning Designer · Harbor Learning Lab (2024–present)\nProgram Assistant · Northside Community Workshop (2022–2024)',
-      values:'I share drafts early, ask whose perspective is missing, and document decisions so colleagues can build on the work.'
-  },
-  {
-    name:'Amara Brooks',
-    role:'Community Programs Coordinator',
-    location:'Philadelphia, PA',
-    summary:'I plan community programs and help volunteers feel prepared. I use feedback from participants and partner organizations to make events easier to attend and run.',
-    skills:'Volunteer coordination, event logistics, community outreach, program evaluation',
-    featuredRoles:[
-      {title:'Program Coordinator · Linden Neighborhood Workshop',dates:'2024–present',summary:'Worked with local partners to move registration to a simpler form and add a phone option. We filled all 40 workshop places and reached 12 first-time participants.'},
-      {title:'Volunteer Lead · Cedar Street Garden',dates:'2022–2024',summary:'Created a short orientation and paired new volunteers with experienced ones. More people felt ready to lead their own shifts.'}
-    ],
-    experience:'Program Coordinator · Linden Neighborhood Workshop (2024–present)\nVolunteer Lead · Cedar Street Garden (2022–2024)',
-    support:'I share schedules early, explain who owns each task, and make time for a quick debrief after events.'
-  },
-  {
-    name:'Mateo Ellis',
-    role:'Customer Operations Specialist',
-    location:'Denver, CO',
-    summary:'I help service teams spot recurring problems and improve how they handle them. I’m comfortable turning feedback into a clear process that teammates can use.',
-    skills:'Customer support, process documentation, spreadsheet reporting, peer training',
-    featuredRoles:[
-      {title:'Support Associate · Summit Loop Equipment',dates:'2023–present',summary:'Reviewed a month of support tickets and found that unclear return instructions caused repeat questions. I rewrote the guide and helped the team reduce follow-up requests by 20% over the next month.'},
-      {title:'Shift Lead · Orchard Corner Market',dates:'2021–2023',summary:'Tested a short closing checklist with teammates. It gave the opening crew a consistent handoff and reduced missed restocking tasks.'}
-    ],
-    experience:'Support Associate · Summit Loop Equipment (2023–present)\nShift Lead · Orchard Corner Market (2021–2023)',
-    values:'I describe problems without blaming people and ask the team to test changes before making them permanent.'
-  }
-];
+const exampleApplicants=globalThis.ForwardDemoApplicants.map(profile=>({
+  ...profile,
+  skills:profile.skills.join(', '),
+  values:profile.values.join(', '),
+  support:profile.colleagueSupport,
+  community:profile.communityImpact
+}));
+
+function appendExampleFeedback(host,example){
+  const details=node('details');
+  details.append(node('summary','Example feedback'),node('p',example.role,'card-meta'),
+    node('h3','What informed the decision'),node('p',example.reason),
+    node('h3','A suggested next step'),node('p',example.nextStep));
+  host.append(details);
+}
 
 function showExampleProfiles(initialRole){
   dialog('Example profiles',body=>{
@@ -339,7 +313,10 @@ function showExampleProfiles(initialRole){
     function draw(){
       const profile=options()[Number(select.value)];
       preview.replaceChildren(node('strong','FAKE','fake-label'));
-      if(role==='applicant')renderApplicantStory(preview,profile);
+      if(role==='applicant'){
+        renderApplicantStory(preview,profile);
+        appendExampleFeedback(preview,profile.feedbackExample);
+      }
       else{
         const demoImages=profile===ForwardTeams.samples[2]
           ? {portrait:'demo-manager-portrait.jpg',showcase:'demo-manager-team.jpg',alt:'A learning design team plans a lesson together around a table.'}
@@ -767,26 +744,6 @@ async function renderSharing(){
   });
 }
 
-const feedbackPracticeScenarios=[
-  {
-    role:'Live Training Lead',
-    requirement:'This opening requires leading live workshops. Casey’s examples show strong learning design and facilitation materials.',
-    reason:'Your facilitator guide and onboarding pilot stood out. This role also requires independently leading live workshops, and I didn’t see an example of that in your profile.',
-    nextStep:'Try co-leading a workshop and add a short example of how you responded to questions or adapted the session.'
-  },
-  {
-    role:'Program Evaluation Analyst',
-    requirement:'This opening requires reporting program results across several cohorts. Amara’s examples show event logistics, outreach, and attendance for an individual workshop.',
-    reason:'Your registration changes made the workshops easier to access. This role requires comparing outcomes across several cohorts, and your examples focused on individual events.',
-    nextStep:'Track one measure across three events and share a short summary of what changed and how you used the results.'
-  },
-  {
-    role:'Operations Team Supervisor',
-    requirement:'This opening requires giving regular feedback to direct reports. Mateo’s examples show process improvements, peer training, and shift handoffs.',
-    reason:'Your returns guide shows how you improve a process. This role requires coaching direct reports over time, and the examples you shared focused on process improvements and peer support.',
-    nextStep:'Try mentoring a new teammate and document the goals you agreed on, how you checked in, and what improved.'
-  }
-];
 
 function declineApplicant(person,onSent){
   const scenario=person.practice;
@@ -866,7 +823,7 @@ async function renderApplicantDeck(){
   const host=$('workspaceContent');
   host.replaceChildren(node('p','Loading applicants…'));
   const [applicants,existing]=await Promise.all([api.applicants(),api.connections()]);
-  const examples=exampleApplicants.map((profile,index)=>({profile,example:true,practice:feedbackPracticeScenarios[index]}));
+  const examples=exampleApplicants.map(profile=>({profile,example:true,practice:profile.feedbackExample}));
   const decisions=new Map(existing.map(item=>[item.applicant_id,item]));
   const filter=node('select');
   filter.id='applicantFilter';
@@ -927,10 +884,12 @@ async function renderApplicantDeck(){
       status('Interest saved. A chat opens when the applicant is open to chatting too.');
     };
     if(person.example){
+      appendShowcase(card,person.profile,person.profile.demoImages.caption);
       const preview=node('details',undefined,'inline-example');
       preview.append(node('summary','Read the example profile'),node('p','Use this fictional profile as a reference.','help'));
-      renderApplicantStory(preview,person.profile);
+      renderApplicantStory(preview,{...person.profile,demoImages:undefined});
       card.append(preview);
+      appendExampleFeedback(card,person.profile.feedbackExample);
       actions.append(button('Practice giving feedback',()=>declineApplicant(person),'primary'));
     }else if(decision?.matched){
       actions.append(button('Open chat',()=>navigate('messages',decision.id),'primary'));

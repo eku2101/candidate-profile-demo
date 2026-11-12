@@ -7,7 +7,8 @@ const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
 const source = fs.readFileSync(path.join(__dirname, 'onboarding.js'), 'utf8');
 const ui = fs.readFileSync(path.join(__dirname, 'forward-ui.js'), 'utf8');
 const app = html.match(/<script>([\s\S]*?)<\/script>/)[1];
-const appModel = app.slice(0, app.indexOf('    document.querySelectorAll(".role-button")'));
+const profiles = fs.readFileSync(path.join(__dirname, 'demo-applicants.js'), 'utf8');
+const appModel = profiles + '\n' + app.slice(0, app.indexOf('    document.querySelectorAll(".role-button")'));
 
 function node() {
   return { hidden:false, value:'', textContent:'', tagName:'BUTTON', classList:{add(){},remove(){},toggle(){}},

@@ -7,7 +7,8 @@ const vm = require('node:vm');
 const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
 const script = html.match(/<script>([\s\S]*?)<\/script>/)[1];
 new vm.Script(script);
-const model = script.slice(0, script.indexOf('    document.querySelectorAll(".role-button")'));
+const profiles = fs.readFileSync(path.join(__dirname, 'demo-applicants.js'), 'utf8');
+const model = profiles + '\n' + script.slice(0, script.indexOf('    document.querySelectorAll(".role-button")'));
 function run(scenario, extras = {}) {
   vm.runInContext(model + '\n' + scenario, vm.createContext({ assert, ...extras }));
 }
@@ -42,7 +43,7 @@ test('every concrete difference produces an actionable prompt for each audience'
 `));
 
 test('equal, flexible, and unanswered choices do not create a false difference', () => run(`
-  const preferences = { ...privateApplicantSignals.alex };
+  const preferences = { ...privateApplicantSignals.jordan };
   assert.equal(getDiscussionPrompts(preferences, preferences, "applicant").length, 0);
   for (const topic of discussionTopics) {
     const team = { ...preferences, [topic.key]: "flexible" };
@@ -54,9 +55,9 @@ test('equal, flexible, and unanswered choices do not create a false difference',
 `));
 
 test('changing any applicant or team preference cannot lower rank or remove anyone', () => run(`
-  applicantPreferences = { ...privateApplicantSignals.alex };
+  applicantPreferences = { ...privateApplicantSignals.jordan };
   rankedApplicants.push({ id: "avery" });
-  hiringCriteria = { ...privateApplicantSignals.alex };
+  hiringCriteria = { ...privateApplicantSignals.jordan };
   rankRemainingApplicants();
   const originalOrder = rankedApplicants.map(person => person.id).join(",");
   const scores = rankedApplicants.map(person => experienceRank(person)).join(",");
@@ -64,17 +65,17 @@ test('changing any applicant or team preference cannot lower rank or remove anyo
   for (const [key, value] of Object.entries(alternatives)) {
     hiringCriteria[key] = value;
     applicantPreferences[key] = value;
-    privateApplicantSignals.alex[key] = value;
+    privateApplicantSignals.jordan[key] = value;
     rankRemainingApplicants();
     assert.equal(rankedApplicants.map(person => person.id).join(","), originalOrder, key);
     assert.equal(rankedApplicants.map(person => experienceRank(person)).join(","), scores, key);
-    assert.equal(rankedApplicants.length, 5);
+  assert.equal(rankedApplicants.length, 4);
   }
 `));
 
 test('editing a saved preference replaces its discussion topic without changing experience order', () => run(`
-  applicantPreferences = { ...privateApplicantSignals.alex };
-  hiringCriteria = { ...privateApplicantSignals.alex, communication: "live" };
+  applicantPreferences = { ...privateApplicantSignals.jordan };
+  hiringCriteria = { ...privateApplicantSignals.jordan, communication: "live" };
   const person = { id: "avery" };
   assert.equal(getDiscussionPrompts(getMatchingProfile(person), hiringCriteria, "applicant")[0].key, "communication");
   const before = experienceRank(person);
@@ -91,15 +92,16 @@ test('editing a saved preference replaces its discussion topic without changing 
 `));
 
 test('experience still orders remaining applicants and reviewed positions stay fixed', () => run(`
+  privateApplicantSignals.mateo.experience = "mid";
   hiringCriteria.experience = "senior";
   rankRemainingApplicants();
-  assert.equal(rankedApplicants[0].id, "alex");
+  assert.equal(rankedApplicants[0].id, "jordan");
   currentIndex = 1;
   hiringCriteria.experience = "mid";
   rankRemainingApplicants();
-  assert.equal(rankedApplicants[0].id, "alex");
-  assert.equal(rankedApplicants[1].id, "jordan");
-  assert.equal(rankedApplicants.length, 4);
+  assert.equal(rankedApplicants[0].id, "jordan");
+  assert.equal(rankedApplicants[1].id, "mateo");
+  assert.equal(rankedApplicants.length, 3);
 `));
 
 test('rendering refreshed prompts clears stale topics and safely renders context text', () => {
@@ -109,14 +111,14 @@ test('rendering refreshed prompts clears stale topics and safely renders context
   const host = element('article');
   const document = { getElementById: () => host, createElement: element };
   run(`
-    const applicant = { ...privateApplicantSignals.alex };
+    const applicant = { ...privateApplicantSignals.jordan };
     const team = { ...applicant, communication: "live" };
     renderDiscussionPanel("test", "hiring", applicant, team, "<b>Example team</b>");
   `, { document });
   assert.equal(host.children.filter(child => child.tag === 'details').length, 1);
   assert.equal(host.children[1].textContent, '<b>Example team</b>');
   run(`
-    renderDiscussionPanel("test", "applicant", privateApplicantSignals.alex, privateApplicantSignals.alex, "Sample team");
+    renderDiscussionPanel("test", "applicant", privateApplicantSignals.jordan, privateApplicantSignals.jordan, "Sample team");
   `, { document });
   assert.equal(host.children.filter(child => child.tag === 'details').length, 0);
   assert.ok(host.children.some(child => child.textContent.includes('No specific differences')));
