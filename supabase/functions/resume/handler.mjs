@@ -10,15 +10,16 @@ export function fileMime(bytes) {
 export function safeFilename(value) {
   return String(value||'resume').replace(/[\x00-\x1f\x7f/\\]/g,'').slice(0,180)||'resume';
 }
-async function boundedForm(request){
+async function boundedForm(request,maxBytes){
   const reader=request.body?.getReader();if(!reader)throw new Error('Missing upload');
   const chunks=[];let size=0;
-  try{while(true){const part=await reader.read();if(part.done)break;size+=part.value.byteLength;if(size>MAX_BYTES+65536){await reader.cancel();return null;}chunks.push(part.value);}}
+  try{while(true){const part=await reader.read();if(part.done)break;size+=part.value.byteLength;if(size>maxBytes+65536){await reader.cancel();return null;}chunks.push(part.value);}}
   finally{reader.releaseLock();}
   return new Response(new Blob(chunks),{headers:{'Content-Type':request.headers.get('content-type')||''}}).formData();
 }
 export function createResumeHandler({createUserClient,admin,allowedOrigin,randomUUID=()=>crypto.randomUUID()}) {
   return async request=>{
+    const params=new URL(request.url).searchParams;
     const origin=request.headers.get('origin');
     const headers={'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Vary':'Origin'};
     const json=(status,message)=>new Response(JSON.stringify(typeof message==='string'?{error:message}:message),{status,headers:{...headers,'Content-Type':'application/json'}});
@@ -36,28 +37,33 @@ export function createResumeHandler({createUserClient,admin,allowedOrigin,random
     const userId=auth.user.id;
     try {
       if(request.method==='POST') {
+        const kind=params.get('kind')||'resume';
+        if(!['resume','portrait','showcase'].includes(kind))return json(400,'Choose a supported upload type.');
+        const photo=kind!=='resume';
+        const maxBytes=photo?2*1024*1024:MAX_BYTES;
         const account=await client.from('forward_accounts').select('role').eq('user_id',userId).single();
-        if(account.error||account.data?.role!=='applicant')return json(403,'Only applicants can upload a résumé.');
+        if(account.error||!['applicant','hiring'].includes(account.data?.role)||(!photo&&account.data.role!=='applicant'))return json(403,'This account cannot upload this type of file.');
         const length=Number(request.headers.get('content-length'));
-        if(length>MAX_BYTES+65536)return json(413,'Choose a file no larger than 10 MB.');
-        const form=await boundedForm(request);if(!form)return json(413,'Choose a file no larger than 10 MB.');
+        if(length>maxBytes+65536)return json(413,photo?'Choose a smaller profile image.':'Choose a file no larger than 10 MB.');
+        const form=await boundedForm(request,maxBytes);if(!form)return json(413,photo?'Choose a smaller profile image.':'Choose a file no larger than 10 MB.');
         const file=form.get('file');
-        if(!file||typeof file.arrayBuffer!=='function'||!file.size||file.size>MAX_BYTES)return json(400,'Choose a PDF, JPG, PNG, or WebP up to 10 MB.');
+        if(!file||typeof file.arrayBuffer!=='function'||!file.size||file.size>maxBytes)return json(400,photo?'Choose a profile image up to 2 MB.':'Choose a PDF, JPG, PNG, or WebP up to 10 MB.');
         const bytes=new Uint8Array(await file.arrayBuffer());
         const mime=fileMime(bytes);
         if(!mime||mime!==file.type)return json(400,'The file contents do not match a supported document type.');
-        const count=await client.from('forward_files').select('id',{count:'exact',head:true});
+        if(photo&&mime!=='image/jpeg')return json(400,'The profile image must be a JPEG.');
+        const count=await client.from('forward_files').select('id',{count:'exact',head:true}).eq('owner_id',userId).eq('kind',kind);
         if(count.error)throw count.error;
-        if(count.count>=10)return json(409,'Remove an unused document before uploading another.');
+        if(count.count>=10)return json(409,photo?'Remove an unused image before uploading another.':'Remove an unused document before uploading another.');
         const id=randomUUID(),path=userId+'/'+id;
         const result=await admin.storage.from('forward-resumes').upload(path,bytes,{contentType:mime,upsert:false,cacheControl:'0'});
         if(result.error)throw result.error;
-        const metadata={id,owner_id:userId,path,name:safeFilename(file.name),mime,size:file.size};
+        const metadata={id,owner_id:userId,path,name:safeFilename(file.name),mime,size:file.size,kind};
         const saved=await admin.from('forward_files').insert(metadata);
         if(saved.error){await admin.storage.from('forward-resumes').remove([path]);throw saved.error;}
         return json(201,metadata);
       }
-      const id=new URL(request.url).searchParams.get('id');
+      const id=params.get('id');
       if(!UUID.test(id||''))return json(400,'Choose a valid document.');
       // RLS returns only an owned file or the current résumé explicitly shared with this manager.
       const selected=await client.from('forward_files').select('*').eq('id',id).maybeSingle();

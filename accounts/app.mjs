@@ -1,6 +1,6 @@
 import {accountConfig} from './config.js?v=public-signup-1';
-import {configReady,applicantFields,questions,questionLabels,normalizeApplicant,applicantIssues,importReviewedFields,wordCount,discussionPrompts} from './model.mjs';
-import {createAccountAPI} from './api.mjs?v=profile-views-1';
+import {configReady,applicantFields,questions,questionLabels,normalizeApplicant,normalizeImages,applicantIssues,importReviewedFields,wordCount,discussionPrompts} from './model.mjs?v=profile-images-1';
+import {createAccountAPI} from './api.mjs?v=profile-images-1';
 import {validateAuthInput,submitAuthentication,authErrorMessage,newPasswordError} from './auth-flow.mjs?v=public-signup-1';
 const $=id=>document.getElementById(id);
 const node=(tag,text,className)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(className)e.className=className;return e;};
@@ -46,18 +46,139 @@ function questionForm(values,hiring=false){
     for(const [value,text] of Object.entries(options)){const option=node('option',text);option.value=value;select.append(option);}select.value=values[key]||'';select.addEventListener('change',()=>{values[key]=select.value;changed();});group.append(label,select);grid.append(group);
   }return grid;
 }
-function publicApplicant(doc){return {...Object.fromEntries(Object.keys(applicantFields).filter(k=>!['email','phone'].includes(k)).map(k=>[k,doc.fields[k]])),featuredRoles:doc.featuredRoles};}
+function publicApplicant(doc){return {...Object.fromEntries(Object.keys(applicantFields).filter(k=>!['email','phone'].includes(k)).map(k=>[k,doc.fields[k]])),featuredRoles:doc.featuredRoles,images:doc.images};}
 function renderApplicantStory(host,profile){
-  host.append(node('h2',profile.name||'Your name'),node('p',[profile.role,profile.location].filter(Boolean).join(' · '),'card-meta'),node('p',profile.summary||'Add your introduction.','profile-lead profile-text'));
+  const identity=node('div',undefined,'profile-identity');
+  identity.append(node('h2',profile.name||'Your name'),node('p',[profile.role,profile.location].filter(Boolean).join(' · '),'card-meta'));
+  prependPortrait(identity,profile);
+  host.append(identity,node('p',profile.summary||'Add your introduction.','profile-lead profile-text'));
+  appendShowcase(host,profile,'Project image');
   for(const role of profile.featuredRoles||[])if(role.title.trim()){const section=node('section',undefined,'notice');section.append(node('h3',role.title),node('p',role.dates,'help'),node('p',role.summary,'profile-text'));host.append(section);}
   for(const key of Object.keys(applicantFields).filter(k=>!['name','role','location','summary','email','phone'].includes(k)))if(profile[key]){const section=node('details');section.append(node('summary',applicantFields[key].label),node('p',profile[key],'profile-text'));host.append(section);}
 }
 function currentFile(){return files.find(f=>f.id===draft?.resumeId);}
+function profileImage(profile,slot,alt){
+  const demo=profile.demoImages?.[slot];
+  const id=profile.images?.[slot];
+  if(!demo&&!id)return null;
+  const img=node('img',undefined,slot==='portrait'?'profile-portrait':'profile-showcase-image');
+  img.alt=alt;
+  img.decoding='async';
+  if(demo)img.src='assets/'+demo;
+  else{
+    img.hidden=true;
+    api.fileRequest({id}).then(blob=>{
+      if(!img.isConnected||!(blob instanceof Blob))return;
+      const url=URL.createObjectURL(new Blob([blob],{type:'image/jpeg'}));
+      img.addEventListener('load',()=>{img.hidden=false;URL.revokeObjectURL(url);},{once:true});
+      img.addEventListener('error',()=>{img.remove();URL.revokeObjectURL(url);},{once:true});
+      img.src=url;
+    }).catch(()=>img.remove());
+  }
+  return img;
+}
+function prependPortrait(host,profile){
+  const portrait=profileImage(profile,'portrait','');
+  if(portrait)host.prepend(portrait);
+}
+function appendShowcase(host,profile,label){
+  const image=profileImage(profile,'showcase',profile.demoImages?.alt||label);
+  if(!image)return;
+  const figure=node('figure',undefined,'profile-showcase');
+  figure.append(image,node('figcaption',label));
+  host.append(figure);
+}
+async function prepareProfileImage(file,slot){
+  if(!['image/jpeg','image/png','image/webp'].includes(file.type)||!file.size||file.size>10*1024*1024){
+    throw new Error('Choose a JPG, PNG, or WebP image up to 10 MB.');
+  }
+  let bitmap;
+  try{bitmap=await createImageBitmap(file);}
+  catch{throw new Error('Forward could not read that image. Try exporting it as a JPG or PNG.');}
+  try{
+    const scale=Math.min(1,(slot==='portrait'?640:1400)/Math.max(bitmap.width,bitmap.height));
+    const canvas=node('canvas');
+    canvas.width=Math.max(1,Math.round(bitmap.width*scale));
+    canvas.height=Math.max(1,Math.round(bitmap.height*scale));
+    const context=canvas.getContext('2d',{alpha:false});
+    if(!context)throw new Error('Image preparation is unavailable in this browser.');
+    context.fillStyle='#ffffff';
+    context.fillRect(0,0,canvas.width,canvas.height);
+    context.drawImage(bitmap,0,0,canvas.width,canvas.height);
+    const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',0.86));
+    if(!blob||blob.size>2*1024*1024)throw new Error('Choose a smaller image and try again.');
+    return new File([blob],file.name.replace(/\.[^.]+$/,'')+'.jpg',{type:'image/jpeg'});
+  }finally{bitmap.close();}
+}
+function renderImageEditor(host){
+  const section=node('section',undefined,'notice profile-image-editor');
+  section.append(node('h3','Profile images'),node('p','Add an optional portrait and one image. Save your draft to keep your choices, then review and publish when you’re ready.','help'));
+  const grid=node('div',undefined,'form-grid');
+  const showcaseLabel=account.role==='applicant'?'Project image':'Team image';
+  for(const [slot,title] of [['portrait','Profile picture'],['showcase',showcaseLabel]]){
+    const group=node('div');
+    const input=node('input');
+    input.id='profile-image-'+slot;
+    input.type='file';
+    input.accept='.jpg,.jpeg,.png,.webp';
+    const label=node('label',title);
+    label.htmlFor=input.id;
+    input.addEventListener('change',()=>run(input,async()=>{
+      const file=input.files[0];
+      if(!file)return;
+      try{
+        status('Preparing and uploading your image…');
+        const prepared=await prepareProfileImage(file,slot);
+        const uploaded=await api.fileRequest({method:'POST',file:prepared,kind:slot});
+        files.push(uploaded);
+        draft.images[slot]=uploaded.id;
+        changed();
+        renderEditor();
+        status('Image added. Save your private draft to keep this change.');
+      }finally{input.value='';}
+    }));
+    group.append(label,input);
+    const current=profileImage(draft,slot,slot==='portrait'?'Profile picture preview':title+' preview');
+    if(current){
+      group.append(current,button('Remove '+title.toLowerCase(),()=>{
+        draft.images[slot]=null;
+        changed();
+        renderEditor();
+      }));
+    }
+    const unused=files.filter(file=>file.kind===slot&&file.id!==draft.images[slot]&&file.id!==publication?.profile.images?.[slot]);
+    if(unused.length){
+      const manage=node('details');
+      manage.append(node('summary','Manage unused images'));
+      for(const file of unused){
+        const row=node('div',undefined,'file-row');
+        row.append(node('span',file.name),button('Use image',()=>{
+          draft.images[slot]=file.id;
+          changed();
+          renderEditor();
+        }),button('Delete image',()=>dialog('Delete this unused image?',body=>{
+          body.append(node('p',file.name),button('Delete image',async()=>{
+            await api.fileRequest({method:'DELETE',id:file.id});
+            files=files.filter(item=>item.id!==file.id);
+            closeDialog();
+            renderEditor();
+            status('Image deleted.');
+          },'danger'));
+        }),'danger'));
+        manage.append(row);
+      }
+      group.append(manage);
+    }
+    grid.append(group);
+  }
+  section.append(grid);
+  host.append(section);
+}
 async function loadOwned(){
   const epoch=sessionEpoch;
-  const [saved,published,documents,grants]=await Promise.all([api.draft(account.role,user.id),api.publication(account.role,user.id),api.files(),api.shares()]);
+  const [saved,published,documents,grants]=await Promise.all([api.draft(account.role,user.id),api.publication(account.role,user.id),api.files(user.id),api.shares()]);
   if(epoch!==sessionEpoch)return false;
-  draft=account.role==='applicant'?normalizeApplicant(saved?.document):{fields:ForwardTeams.normalizeFields(saved?.document?.fields),answers:ForwardTeams.normalizeAnswers(saved?.document?.answers)};
+  draft=account.role==='applicant'?normalizeApplicant(saved?.document):{fields:ForwardTeams.normalizeFields(saved?.document?.fields),answers:ForwardTeams.normalizeAnswers(saved?.document?.answers),images:normalizeImages(saved?.document?.images)};
   version=saved?.version||0;publication=published;files=documents;shares=grants;dirty=false;revision=0;return true;
 }
 async function saveDraft(){
@@ -99,8 +220,9 @@ function renderEditor(){
   if(step===0){panel.append(node('p','There is no ideal answer. Differences help start a conversation and never exclude someone.'));
     panel.append(node('p',account.role==='applicant'?'Your selected answers stay private. Managers you share with receive discussion questions about differences, without seeing your selected answers. You can compare your answers with a manager’s published answers when exploring a team.':'These team answers will be included when you publish your manager profile.','notice'));
     panel.append(questionForm(account.role==='applicant'?draft.preferences:draft.answers,account.role==='hiring'));
-  }else if(account.role==='hiring'&&step===1){panel.append(fieldsGrid(ForwardTeams.fields,draft.fields,changed,'manager-'));}
+  }else if(account.role==='hiring'&&step===1){renderImageEditor(panel);panel.append(fieldsGrid(ForwardTeams.fields,draft.fields,changed,'manager-'));}
   else if(account.role==='applicant'&&step===1){
+    renderImageEditor(panel);
     panel.append(fieldsGrid(Object.fromEntries(Object.entries(applicantFields).slice(0,7)),draft.fields,changed,'applicant-'));
     const history=node('details');
     history.open=Boolean(draft.fields.experience||draft.fields.education||draft.fields.credentials);
@@ -120,7 +242,7 @@ function showExampleProfile(){
   if(account.role==='hiring'){
     dialog('Example hiring manager profile',body=>{
       body.append(node('p','Fictional example. Describe what the role involves, how the team works, and how you help people succeed.','notice'));
-      renderTeamStory(body,ForwardTeams.samples[2]);
+      renderTeamStory(body,{...ForwardTeams.samples[2],demoImages:{portrait:'demo-manager-portrait.jpg',showcase:'demo-manager-team.jpg',alt:'A learning design team plans a lesson together around a table.'}});
     });
     return;
   }
@@ -130,6 +252,7 @@ function showExampleProfile(){
       name:'Casey Park',
       role:'Learning Experience Designer',
       location:'New York, NY',
+      demoImages:{portrait:'demo-applicant-portrait.jpg',showcase:'demo-applicant-project.jpg',alt:'A tablet and facilitator cards from a volunteer onboarding project.'},
       summary:'I turn complex processes into clear learning materials. I work with subject experts, test drafts with learners, and revise based on what people get stuck on.',
       skills:'Instructional design, learner interviews, accessibility, usability testing',
       featuredRoles:[
@@ -168,7 +291,7 @@ async function renderProfileViews(){
 function renderPublishing(panel){
   const applicant=account.role==='applicant';
   panel.append(node('p',publication?`A shared version exists. ${dirty||publication.version!==version?'Your latest draft edits are not shared yet.':'Your saved draft and shared version match.'}`:'No profile is shared yet.','notice'));
-  if(applicant)renderApplicantStory(panel,publicApplicant(draft));else renderTeamStory(panel,{...draft.fields,answers:draft.answers});
+  if(applicant)renderApplicantStory(panel,publicApplicant(draft));else renderTeamStory(panel,{...draft.fields,answers:draft.answers,images:draft.images});
   if(applicant){
     panel.append(node('p',currentFile()?'Résumé to include: '+currentFile().name:'No résumé will be included. You can still share your profile.','help'));
     panel.append(button('Preview as a hiring manager',()=>dialog('Hiring manager preview',body=>{
@@ -183,7 +306,7 @@ function renderPublishing(panel){
     if(issues.length)throw new Error(issues[0].message);
     const approvedRevision=revision;
     dialog(applicant?'Save the version managers can see?':'Publish your hiring profile?',body=>{
-      body.append(node('p',applicant?'Only managers you explicitly share with can see this version. Managers already on your sharing list will see these updates, including the selected résumé. Your questionnaire answers and separate contact fields stay private.':'Signed-in Forward users will be able to see your manager profile, role description, and team questionnaire answers. Your private draft changes will stay private until you publish again.'));
+    body.append(node('p',applicant?'Only managers you explicitly share with can see this version, including any profile images and the selected résumé. Your questionnaire answers and separate contact fields stay private.':'Signed-in Forward users will be able to see your manager profile, role description, team questionnaire answers, and any profile images.'));
       body.append(button(applicant?'Save sharing version':'Publish hiring profile',async()=>{
         if(approvedRevision!==revision)throw new Error('Your draft changed. Close this review and review it again.');
         await saveDraft();if(approvedRevision!==revision)throw new Error('New edits arrived during saving. Review them before publishing.');
@@ -273,7 +396,7 @@ function createResumeSaver(file){
         uploadedFile=await api.fileRequest({method:'POST',file});
         files.push(uploadedFile);
       }
-      const next=importReviewedFields(wholeProfile||draft,reviewed);
+      const next=importReviewedFields(wholeProfile?{...wholeProfile,images:draft.images}:draft,reviewed);
       if(uploadedFile)next.resumeId=uploadedFile.id;
       const saved=await api.save(next,version);
       draft=next;
@@ -306,8 +429,9 @@ async function importBrowserDraft(){
   reviewImport({fields:record.fields,warnings:[],rawText:record.resumeText||''},record.resumeFile instanceof Blob?record.resumeFile:null,normalizeApplicant(record));
 }
 function renderFiles(host){
-  if(!files.length){host.append(node('p','No documents uploaded.','help'));return;}
-  files.forEach(file=>{const row=node('div',undefined,'file-row');const copy=node('div');copy.append(node('strong',file.name),node('small',`${(file.size/1024).toFixed(0)} KB${file.id===draft.resumeId?' · Selected for your draft':''}`));const actions=node('div',undefined,'file-actions');
+  const documents=files.filter(file=>!file.kind||file.kind==='resume');
+  if(!documents.length){host.append(node('p','No documents uploaded.','help'));return;}
+  documents.forEach(file=>{const row=node('div',undefined,'file-row');const copy=node('div');copy.append(node('strong',file.name),node('small',`${(file.size/1024).toFixed(0)} KB${file.id===draft.resumeId?' · Selected for your draft':''}`));const actions=node('div',undefined,'file-actions');
     actions.append(button('Download',()=>downloadFile(file)));
     actions.append(button(file.id===draft.resumeId?'Detach':'Use this résumé',()=>{draft.resumeId=file.id===draft.resumeId?null:file.id;changed();renderEditor();}));
     if(file.id!==draft.resumeId&&file.id!==publication?.resume_id)actions.append(button('Delete',()=>dialog('Delete this unused document?',body=>{body.append(node('p',`${file.name} will be permanently removed from your account.`),button('Delete document',async()=>{await api.fileRequest({method:'DELETE',id:file.id});files=files.filter(f=>f.id!==file.id);closeDialog();renderEditor();status('Document removed.');},'danger'));}),'danger'));
@@ -319,8 +443,12 @@ async function downloadFile(file){
   const url=URL.createObjectURL(blob);const a=node('a');a.href=url;a.download=file.name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
 }
 function renderTeamStory(host,profile){
-  host.append(node('h2',profile.managerName||'Your name'),node('p',[profile.managerTitle,profile.company].filter(Boolean).join(' · '),'card-meta'),node('p',profile.managerBio,'profile-text'));
+  const identity=node('div',undefined,'profile-identity');
+  identity.append(node('h2',profile.managerName||'Your name'),node('p',[profile.managerTitle,profile.company].filter(Boolean).join(' · '),'card-meta'));
+  prependPortrait(identity,profile);
+  host.append(identity,node('p',profile.managerBio,'profile-text'));
   host.append(node('h3',profile.roleTitle||'Your opportunity'),node('p',[profile.location,profile.employmentType].filter(Boolean).join(' · '),'help'),node('p',profile.roleSummary,'profile-text'),node('h3','Culture, support & connection'),node('p',profile.teamStory||'Ask how this team supports people.','profile-text'));
+  appendShowcase(host,profile,'Team image');
   const answers=node('div',undefined,'team-answers');for(const key of Object.keys(questions)){const section=node('section',undefined,'team-answer');section.append(node('h3',questionLabels[key]),node('p',questions[key][profile.answers?.[key]]||'Not answered yet'));answers.append(section);}host.append(answers);
 }
 async function renderDiscovery(){
@@ -488,7 +616,7 @@ async function renderApplicantDeck(){
 async function showSharedApplicant(id){
   const person=await api.publication('applicant',id);
   if(!person)throw new Error('This applicant is no longer sharing their profile with you.');
-  const [documents,prompts]=await Promise.all([api.files(),api.prompts(id)]);
+  const [documents,prompts]=await Promise.all([api.files(id),api.prompts(id)]);
   dialog(person.profile.name,body=>{
     renderApplicantStory(body,person.profile);body.append(node('p','Featured roles are highlights. Read the full résumé for the complete experience and context.','notice'));
     const file=documents.find(f=>f.id===person.resume_id);if(file)body.append(button('Download résumé · '+file.name,()=>downloadFile(file),'primary'));else body.append(node('p','No résumé attached.'));
