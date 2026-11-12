@@ -1,7 +1,8 @@
 import {accountConfig} from './config.js?v=public-signup-1';
 import '../demo-applicants.js?v=expert-demo-1';
 import {configReady,applicantFields,hiringBackgroundFields,hiringResumeFields,questions,questionLabels,normalizeApplicant,normalizeImages,applicantIssues,importReviewedFields,wordCount,discussionPrompts} from './model.mjs?v=hiring-resume-1';
-import {createAccountAPI} from './api.mjs?v=message-alerts-1';
+import {createAccountAPI} from './api.mjs?v=community-feed-1';
+import {mountCommunity} from './community.mjs?v=community-feed-1';
 import {validateAuthInput,submitAuthentication,authErrorMessage,newPasswordError} from './auth-flow.mjs?v=public-signup-1';
 import {installHelpChat} from './help-chat.mjs?v=vera-portrait-1';
 const $=id=>document.getElementById(id);
@@ -9,6 +10,7 @@ const node=(tag,text,className)=>{const e=document.createElement(tag);if(text!==
 const button=(text,fn,kind='secondary')=>{const e=node('button',text,'button '+kind);e.type='button';e.addEventListener('click',()=>run(e,fn));return e;};
 let client,api,user,account,draft,version=0,publication=null,files=[],shares=[],teams=[],step=0,route='profile',dirty=false,revision=0,busy=false,authMode='signin',sessionEpoch=0,recovery=false,pendingEmail='';
 let stopChat=()=>{};
+let stopCommunity=()=>{};
 let chatChannelCleanup=Promise.resolve();
 let stopFeedback=()=>{};
 let stopMessageAlerts=()=>{};
@@ -206,10 +208,12 @@ async function saveDraft(){
 }
 async function navigate(next,connectionId){
   stopChat();
+  stopCommunity();
   route=next;
   renderNav();
   if(next==='profile')renderEditor();
   else if(next==='discover')await renderDiscovery();
+  else if(next==='community')renderCommunity();
   else if(next==='messages')await renderMessages(connectionId);
   else if(next==='views')await renderProfileViews();
   else if(next==='feedback'){
@@ -223,9 +227,18 @@ async function navigate(next,connectionId){
 function renderNav(){
   const items=account.role==='applicant'?[['profile','My profile'],['discover','Discover teams'],['sharing','Sharing']]:[['profile','My hiring profile'],['sharing','Applicants']];
   items.push(['messages','Messages']);
+  items.push(['community','Community']);
   items.push(['views','Profile views']);
   if(account.role==='applicant')items.push(['feedback','Feedback']);
   $('accountNav').replaceChildren(...items.map(([id,label])=>{const b=button(label,()=>navigate(id));if(route===id)b.setAttribute('aria-current','page');return b;}));$('accountNav').hidden=false;
+}
+function renderCommunity(){
+  heading('COMMUNITY','Your story. Your choice.','Share the work, people, and moments behind your profile.');
+  stopCommunity=mountCommunity({
+    host:$('workspaceContent'),api,authorId:user.id,
+    authorName:account.role==='hiring'?draft.fields.managerName:draft.fields.name,
+    dialog,dialogElement:$('reviewDialog'),closeDialog,run,status
+  });
 }
 function renderEditor(){
   showPage('workspace');heading(account.role==='applicant'?'YOUR APPLICANT WORKSPACE':'YOUR HIRING WORKSPACE',account.role==='applicant'?'Your story. Your way.':'Let applicants meet you, too.',account.role==='applicant'?'Save a private draft, then choose the hiring managers you want to share it with.':'Introduce your team, the opportunity, and how you work together.');
@@ -725,6 +738,7 @@ async function renderDiscovery(){
   const actions=node('div',undefined,'actions');
   actions.append(button('Build my profile',()=>navigate('profile'),'primary'),
     button('See applicant examples',()=>showExampleProfiles('applicant')),
+    button('Explore community',()=>navigate('community')),
     button('Manage sharing',()=>navigate('sharing')));
   profileActions.append(node('h2','Tell your story'),node('p','See how fictional applicants describe their work, impact, and community. Build your own profile and choose which managers can see it.'),actions);
   host.replaceChildren(label,search,live,examples,profileActions);
@@ -1364,6 +1378,7 @@ function setAuthMode(mode){
 }
 async function handleSession(session,event){
   stopChat();
+  stopCommunity();
   stopFeedback();
   stopMessageAlerts();
   const epoch=++sessionEpoch;

@@ -31,6 +31,24 @@ export function createAccountAPI(client) {
     },
     chatStarter:id=>checked(client.rpc('forward_chat_starter',{p_connection_id:id})),
     messageUpdates:()=>checked(client.rpc('forward_message_updates')),
+    listCommunityPosts:authorId=>{
+      const query=client.from('forward_community_posts').select('*').not('published_at','is',null)
+        .order('published_at',{ascending:false}).order('id',{ascending:false}).limit(24);
+      return checked(authorId?query.eq('author_id',authorId):query);
+    },
+    communityDrafts:()=>checked(client.from('forward_community_posts').select('*').is('published_at',null)),
+    communityPost:id=>checked(client.from('forward_community_posts').select('*').eq('id',id).maybeSingle()),
+    addCommunityDraft:post=>checked(client.from('forward_community_posts').insert(post)),
+    publishCommunityDraft:id=>checked(client.rpc('forward_publish_community_post',{p_id:id})),
+    discardCommunityPost:(id,onlyDraft=false)=>{
+      const query=client.from('forward_community_posts').delete().eq('id',id);
+      return checked((onlyDraft?query.is('published_at',null):query).select('id').maybeSingle());
+    },
+    communityAsset:path=>checked(client.storage.from('forward-community').download(path)),
+    uploadCommunityAsset:(path,file)=>checked(client.storage.from('forward-community').upload(path,file,{
+      contentType:file.type,upsert:false,cacheControl:'60'
+    })),
+    removeCommunityAssets:paths=>checked(client.storage.from('forward-community').remove(paths)),
     employerStatus:async()=> (await checked(client.rpc('forward_employer_status')))[0]||null,
     requestVerification:website=>checked(client.rpc('forward_request_employer_verification',{p_website:website})),
     messages:(id,before)=>{
