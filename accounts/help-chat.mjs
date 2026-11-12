@@ -39,13 +39,13 @@ export function installHelpChat(getContext){
         answer=response.error?null:response.data?.answer;
       }
       if(typeof answer==='string'&&answer.trim()){
-        addMessage('Forward AI',answer);
+        addMessage('Vera · AI',answer);
         history=[...history,{role:'user',content:question},{role:'assistant',content:answer.slice(0,1500)}].slice(-4);
       }else{
-        addMessage('Forward help guide',guidedReply(question,role));
+        addMessage('Vera’s help guide',guidedReply(question,role));
       }
     }catch{
-      addMessage('Forward help guide',guidedReply(question,role));
+      addMessage('Vera’s help guide',guidedReply(question,role));
     }finally{
       status.textContent='';
       pending=false;
@@ -64,7 +64,7 @@ export function installHelpChat(getContext){
   }
   form.addEventListener('submit',event=>{event.preventDefault();ask(input.value);});
   document.getElementById('openForwardHelp').addEventListener('click',()=>{
-    if(!log.children.length)addMessage('Forward help','Ask how to use Forward, or get a starting point for your profile.');
+    if(!log.children.length)addMessage('Vera','Ask how to use Forward or get help describing your experience in your own words.');
     dialog.showModal();
   });
 }
