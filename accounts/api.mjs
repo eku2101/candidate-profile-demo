@@ -18,6 +18,8 @@ export function createAccountAPI(client) {
     share:(managerId,version)=>checked(client.rpc('forward_share',{p_manager_id:managerId,p_version:version})),
     withdraw:managerId=>checked(client.rpc('forward_withdraw',{p_manager_id:managerId})),
     connections:()=>checked(client.rpc('forward_connections')),
+    recordProfileView:id=>checked(client.rpc('forward_record_profile_view',{p_profile_id:id})),
+    profileViewers:()=>checked(client.rpc('forward_profile_viewers')),
     chooseConnection:(id,choice)=>checked(client.rpc('forward_choose_connection',{p_other_id:id,p_choice:choice})),
     messages:(id,before)=>{
       const query=client.from('forward_messages').select('*').eq('connection_id',id).order('id',{ascending:false}).limit(50);

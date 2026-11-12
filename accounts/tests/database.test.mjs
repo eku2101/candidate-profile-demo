@@ -85,6 +85,31 @@ test('only a specifically chosen manager gets a shared snapshot, and withdrawal 
   await rpc(a,'forward_withdraw',[m]);
   assert.equal((await as(m,'select * from public.forward_applicant_publications')).rows.length,0);
 });
+test('profile views are private, deduplicated, and respect who may open a profile',async()=>{
+  await setupApplicant();
+  await setupManager();
+  await setupManager(n);
+  const view=(viewer,profile)=>rpc(viewer,'forward_record_profile_view',[profile]);
+  const viewers=id=>as(id,'select * from public.forward_profile_viewers()');
+  await view(m,a);
+  await view(a,a);
+  assert.equal((await viewers(a)).rows.length,0);
+  await view(a,m);
+  assert.equal((await viewers(m)).rows[0].viewer_name,null);
+  await rpc(a,'forward_share',[m,1]);
+  assert.equal((await viewers(m)).rows[0].viewer_name,'Riley Park');
+  await view(m,a);
+  await view(m,a);
+  await view(n,a);
+  const result=(await viewers(a)).rows;
+  assert.equal(result.length,1);
+  assert.equal(result[0].viewer_name,'Morgan');
+  assert.equal(result[0].viewer_role,'hiring');
+  assert.equal((await viewers(n)).rows.length,0);
+  await assert.rejects(()=>viewers(null),/permission denied/);
+  await rpc(a,'forward_withdraw',[m]);
+  assert.equal((await viewers(m)).rows[0].viewer_name,null);
+});
 test('draft edits do not change shared content until explicitly published',async()=>{
   await setupApplicant();await setupManager();await rpc(a,'forward_share',[m,1]);
   const next=applicant();next.fields.summary='A revised introduction.';

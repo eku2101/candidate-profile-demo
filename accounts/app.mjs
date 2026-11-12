@@ -1,6 +1,6 @@
 import {accountConfig} from './config.js?v=public-signup-1';
 import {configReady,applicantFields,questions,questionLabels,normalizeApplicant,applicantIssues,importReviewedFields,wordCount,discussionPrompts} from './model.mjs';
-import {createAccountAPI} from './api.mjs?v=hiring-matches-1';
+import {createAccountAPI} from './api.mjs?v=profile-views-1';
 import {validateAuthInput,submitAuthentication,authErrorMessage,newPasswordError} from './auth-flow.mjs?v=public-signup-1';
 const $=id=>document.getElementById(id);
 const node=(tag,text,className)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(className)e.className=className;return e;};
@@ -71,6 +71,7 @@ async function navigate(next,connectionId){
   if(next==='profile')renderEditor();
   else if(next==='discover')await renderDiscovery();
   else if(next==='messages')await renderMessages(connectionId);
+  else if(next==='views')await renderProfileViews();
   else await renderSharing();
   $('workspaceTitle').focus();
   window.scrollTo(0,0);
@@ -78,6 +79,7 @@ async function navigate(next,connectionId){
 function renderNav(){
   const items=account.role==='applicant'?[['profile','My profile'],['discover','Discover teams'],['sharing','Sharing']]:[['profile','My hiring profile'],['sharing','Applicants']];
   items.push(['messages','Messages']);
+  items.push(['views','Profile views']);
   $('accountNav').replaceChildren(...items.map(([id,label])=>{const b=button(label,()=>navigate(id));if(route===id)b.setAttribute('aria-current','page');return b;}));$('accountNav').hidden=false;
 }
 function renderEditor(){
@@ -86,7 +88,9 @@ function renderEditor(){
   const saveStatus=node('div',undefined,'draft-status');const message=node('p');message.id='draftSaveStatus';saveStatus.append(message);
   saveStatus.append(button('Reload saved version',()=>{
     dialog('Reload your saved profile?',body=>{body.append(node('p','This replaces any unsaved edits in this tab with the version saved to your account.'),button('Reload saved version',async()=>{await loadOwned();closeDialog();renderEditor();status('Your saved profile has been loaded.');}));});
-  }));host.append(saveStatus);
+  }));
+  saveStatus.append(button('See an example profile',showExampleProfile));
+  host.append(saveStatus);
   const panel=node('section',undefined,'panel');
   const labels=account.role==='applicant'?['Work preferences','About you','Your top three','Values & teamwork','Review & share']:['Team questionnaire','Manager & role','Review & publish'];
   step=Math.min(step,labels.length-1);const steps=node('nav',undefined,'steps');steps.setAttribute('aria-label','Profile steps');
@@ -112,6 +116,55 @@ function renderEditor(){
   const actions=node('div',undefined,'actions');if(step>0)actions.append(button('← Back',()=>{step--;renderEditor();}));if(step<labels.length-1)actions.append(button('Continue →',()=>{if(step===0){const answers=account.role==='applicant'?draft.preferences:draft.answers;const missing=Object.keys(answers).find(k=>!answers[k]);if(missing){$('answer-'+missing).focus();throw new Error('Choose an answer to each question. Different preferences are welcome.');}}step++;renderEditor();},'primary'));panel.append(actions);host.append(panel);
   const strip=node('div',undefined,'save-strip');strip.append(node('p','Drafts are private until you choose to share.','help'));const controls=node('div',undefined,'actions');controls.append(button('Save private draft',saveDraft,'primary'));strip.append(controls);host.append(strip);updateSaveStatus();
 }
+function showExampleProfile(){
+  if(account.role==='hiring'){
+    dialog('Example hiring manager profile',body=>{
+      body.append(node('p','Fictional example. Describe what the role involves, how the team works, and how you help people succeed.','notice'));
+      renderTeamStory(body,ForwardTeams.samples[2]);
+    });
+    return;
+  }
+  dialog('Example applicant profile',body=>{
+    body.append(node('p','Fictional example. Start with the work you do, then show what changed because of your contribution.','notice'));
+    renderApplicantStory(body,{
+      name:'Casey Park',
+      role:'Learning Experience Designer',
+      location:'New York, NY',
+      summary:'I turn complex processes into clear learning materials. I work with subject experts, test drafts with learners, and revise based on what people get stuck on.',
+      skills:'Instructional design, learner interviews, accessibility, usability testing',
+      featuredRoles:[
+        {title:'Learning Designer · Harbor Learning Lab',dates:'2024–present',summary:'Redesigned volunteer onboarding using learner interviews and a short pilot. Completion rose from 68% to 84% over the next two cohorts.'},
+        {title:'Program Assistant · Northside Community Workshop',dates:'2022–2024',summary:'Created a plain-language facilitator guide that helped new volunteers run their first workshop.'}
+      ],
+      experience:'Learning Designer · Harbor Learning Lab (2024–present)\nProgram Assistant · Northside Community Workshop (2022–2024)',
+      values:'I share drafts early, ask whose perspective is missing, and document decisions so colleagues can build on the work.'
+    });
+  });
+}
+
+async function renderProfileViews(){
+  heading('PROFILE VIEWS','Who viewed your profile?','See who opened your full profile and when. Names appear when the viewer has a profile you can access.');
+  const host=$('workspaceContent');
+  host.replaceChildren(node('p','Loading profile views…'));
+  const viewers=await api.profileViewers();
+  host.replaceChildren(button('Refresh profile views',renderProfileViews));
+  if(!viewers.length){
+    host.append(node('p','No profile views yet. Views start when someone opens your shared or published profile.','empty'));
+    return;
+  }
+  const list=node('ul',undefined,'profile-views');
+  const format=new Intl.DateTimeFormat(undefined,{dateStyle:'medium',timeStyle:'short'});
+  for(const viewer of viewers){
+    const role=viewer.viewer_role==='hiring'?'Hiring manager':'Applicant';
+    const entry=node('li',undefined,'panel');
+    const time=node('time',format.format(new Date(viewer.viewed_at)));
+    time.dateTime=viewer.viewed_at;
+    entry.append(node('strong',viewer.viewer_name||role),node('span',viewer.viewer_name?role:'Name unavailable','help'),time);
+    list.append(entry);
+  }
+  host.append(list);
+}
+
 function renderPublishing(panel){
   const applicant=account.role==='applicant';
   panel.append(node('p',publication?`A shared version exists. ${dirty||publication.version!==version?'Your latest draft edits are not shared yet.':'Your saved draft and shared version match.'}`:'No profile is shared yet.','notice'));
@@ -271,7 +324,7 @@ function renderTeamStory(host,profile){
   const answers=node('div',undefined,'team-answers');for(const key of Object.keys(questions)){const section=node('section',undefined,'team-answer');section.append(node('h3',questionLabels[key]),node('p',questions[key][profile.answers?.[key]]||'Not answered yet'));answers.append(section);}host.append(answers);
 }
 async function renderDiscovery(){
-  heading('DISCOVER TEAMS','Choose your next team, too.','Meet the hiring manager and explore how the team works before sharing your story.');
+  heading('DISCOVER TEAMS','Choose your next team, too.','Meet the hiring manager and explore how the team works. Managers can see when someone opens their full profile.');
   const host=$('workspaceContent');host.replaceChildren(node('p','Loading teams…'));teams=await api.teams();shares=await api.shares();host.replaceChildren();
   host.append(node('p','Manager and company descriptions are supplied by account holders. Forward has not independently verified their employment or vacancies. Review the person and organization before sharing your résumé.','notice'));
   const label=node('label','Search roles, managers, companies, or locations');label.htmlFor='teamSearch';const search=node('input');search.id='teamSearch';search.type='search';host.append(label,search);const count=node('p',undefined,'help');count.setAttribute('role','status');host.append(count);const cards=node('div',undefined,'cards');host.append(cards);
@@ -299,6 +352,7 @@ function showTeam(team){
       });
     },'primary'));
   });
+  api.recordProfileView(team.owner_id).catch(()=>{});
 }
 async function renderSharing(){
   if(account.role==='hiring')return renderApplicantDeck();
@@ -340,7 +394,7 @@ async function renderSharing(){
 }
 
 async function renderApplicantDeck(){
-  heading('APPLICANTS SHARED WITH YOU','Meet the people behind the résumé.','Preview the applicants who shared with you. Swipe right for Interested or left to Pass. You can revisit passed profiles any time.');
+  heading('APPLICANTS SHARED WITH YOU','Meet the people behind the résumé.','Swipe right for Interested or left to Pass. Applicants can see when you open their full profile. You can revisit passed profiles any time.');
   const host=$('workspaceContent');
   host.replaceChildren(node('p','Loading applicants…'));
   const [applicants,existing]=await Promise.all([api.applicants(),api.connections()]);
@@ -441,6 +495,7 @@ async function showSharedApplicant(id){
     body.append(node('h3','Start a conversation'),node('p','These are possible working agreements to explore, never reasons to disqualify someone. The applicant’s selected answers remain private.'));
     if(prompts?.length){const list=node('ul');for(const prompt of prompts)list.append(node('li',prompt.question));body.append(list);}else body.append(node('p','What helps each of us do our best work, and what should we agree on before starting?'));
   });
+  api.recordProfileView(id).catch(()=>{});
 }
 
 async function renderMessages(selection){
