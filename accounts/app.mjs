@@ -1,7 +1,7 @@
-import {accountConfig} from './config.js';
+import {accountConfig} from './config.js?v=public-signup-1';
 import {configReady,applicantFields,questions,questionLabels,normalizeApplicant,applicantIssues,importReviewedFields,wordCount,discussionPrompts} from './model.mjs';
 import {createAccountAPI} from './api.mjs';
-import {validateAuthInput,submitAuthentication,authErrorMessage,newPasswordError} from './auth-flow.mjs';
+import {validateAuthInput,submitAuthentication,authErrorMessage,newPasswordError} from './auth-flow.mjs?v=public-signup-1';
 const $=id=>document.getElementById(id);
 const node=(tag,text,className)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(className)e.className=className;return e;};
 const button=(text,fn,kind='secondary')=>{const e=node('button',text,'button '+kind);e.type='button';e.addEventListener('click',()=>run(e,fn));return e;};
