@@ -237,6 +237,7 @@ async function handleSession(session,event){
 }
 async function initialize(){
   if(!configReady(accountConfig)){showPage('setupNotice');return;}
+  $('accountPreview').hidden=accountConfig.showAccountEntry!==false;
   const {createClient}=await import('./vendor/supabase.js');
   client=createClient(accountConfig.supabaseUrl,accountConfig.publishableKey,{auth:{storage:sessionStorage,persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'implicit',storageKey:'forward-account-session'}});api=createAccountAPI(client);
   $('signInTab').addEventListener('click',()=>setAuthMode('signin'));$('signUpTab').addEventListener('click',()=>setAuthMode('signup'));

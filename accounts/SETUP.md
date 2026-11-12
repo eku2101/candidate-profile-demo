@@ -1,6 +1,6 @@
 # Forward accounts: activation and verification
 
-This branch implements a separate account workspace at `accounts.html` while preserving the existing browser-only class demo. The main website offers the account link only after `accounts/config.js` is enabled. It is deliberately disabled until a real backend has been connected and tested. Local interface fixtures are not a live authentication service.
+This branch implements a separate account workspace at `accounts.html` while preserving the existing browser-only class demo. The deployed backend has passed hosted acceptance tests. For the email acceptance stage, `enabled: true` opens the direct account page while `showAccountEntry: false` hides its entry on the main website and displays a preview notice. The URL is public; this flag is not access control. Set `showAccountEntry: true` only after real email and browser acceptance checks pass. `enabled: false` can disable both entry points. Local interface fixtures are not a live authentication service.
 
 ## Connect the owner’s Supabase project
 
@@ -9,7 +9,7 @@ This branch implements a separate account workspace at `accounts.html` while pre
 3. The `resume` Edge Function is deployed as version 1 with `verify_jwt = false`, as declared in `supabase/config.toml`. This is intentional: the function independently verifies the bearer token using Supabase Auth `getUser()` on every request. It does not trust unverified JWT payloads. Its default allowed origin is exactly `https://eku2101.github.io`; `FORWARD_ORIGIN` can override that for a separate test deployment. Built-in Supabase URL, anon key, and service-role key stay in the function runtime.
 4. Enable email/password sign-in, email confirmation, a minimum 12-character password, appropriate Auth rate limits, and production email delivery. Supabase’s built-in SMTP is limited to authorized project-team addresses; it does **not** enable general applicant sign-ups. Configure the owner’s SMTP provider before enabling this feature for real visitors. A project with existing production mail settings can reuse them.
 5. Configure the site URL and exact email redirect URL as `https://eku2101.github.io/candidate-profile-demo/accounts.html`. Do not add wildcard or arbitrary redirect URLs. Keep verification enabled.
-6. Fill `accounts/config.js` with the project HTTPS URL and a **publishable** key (`sb_publishable_…`). These values are intentionally public; row policies and the authenticated file function provide access control. Set `enabled: true` only after the acceptance checks below pass. Never use a service-role or secret key in this file.
+6. Fill `accounts/config.js` with the project HTTPS URL and a **publishable** key (`sb_publishable_…`). These values are intentionally public; row policies and the authenticated file function provide access control. After backend checks pass, enable the direct account page for real email acceptance testing with `showAccountEntry: false`. Advertise accounts through `showAccountEntry: true` only when all remaining checks pass. Never use a service-role or secret key in this file.
 7. Deploy through the existing GitHub Pages workflow after review. No personal applicant records or documents belong in this repository.
 
 ## Behavior and boundaries
