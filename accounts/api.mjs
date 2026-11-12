@@ -26,10 +26,13 @@ export function createAccountAPI(client) {
       return checked(before===undefined?query:query.lt('id',before));
     },
     sendMessage:(id,body)=>checked(client.from('forward_messages').insert({connection_id:id,body}).select().single()),
-    files:()=>list('forward_files'),
-    async fileRequest({method='GET',id,file}={}) {
+    files:owner=>checked(client.from('forward_files').select('*').eq('owner_id',owner)),
+    async fileRequest({method='GET',id,file,kind}={}) {
       const body=file?new FormData():undefined;if(file)body.append('file',file);
-      const result=await client.functions.invoke('resume'+(id?'?id='+encodeURIComponent(id):''),{method,body});
+      const params=new URLSearchParams();
+      if(id)params.set('id',id);
+      if(kind)params.set('kind',kind);
+      const result=await client.functions.invoke('resume'+(params.size?'?'+params.toString():''),{method,body});
       if(result.error){let message='The document request failed. Check your connection and access, then try again.';try{message=(await result.error.context.json()).error||message;}catch{}throw new Error(message);}
       return result.data;
     }

@@ -142,6 +142,41 @@ test('file metadata follows explicit sharing, and a different applicant cannot a
   await rpc(a,'forward_share',[m,2]);assert.equal((await as(m,'select * from public.forward_files')).rows.length,1);
   await rpc(a,'forward_withdraw',[m]);assert.equal((await as(m,'select * from public.forward_files')).rows.length,0);
 });
+test('profile photos follow publication and sharing without exposing draft images',async()=>{
+  await setupApplicant();
+  await setupApplicant(b);
+  await setupManager();
+  const portrait='55555555-5555-4555-8555-555555555555';
+  const project='66666666-6666-4666-8666-666666666666';
+  const team='77777777-7777-4777-8777-777777777777';
+  await db.exec('reset role');
+  for(const [id,owner,kind] of [[portrait,a,'portrait'],[project,a,'showcase'],[team,m,'showcase']]){
+    await db.query("insert into public.forward_files(id,owner_id,path,name,mime,size,kind) values($1,$2,$3,'photo.jpg','image/jpeg',100,$4)",[id,owner,owner+'/'+id,kind]);
+  }
+  const doc=applicant();
+  doc.images={portrait,showcase:project};
+  await assert.rejects(()=>rpc(b,'forward_save_draft',[JSON.stringify(doc),1],['jsonb','integer']),/does not belong/);
+  await assert.rejects(()=>rpc(a,'forward_save_draft',[JSON.stringify({...doc,resumeId:project}),1],['jsonb','integer']),/résumé document/);
+  await rpc(a,'forward_save_draft',[JSON.stringify(doc),1],['jsonb','integer']);
+  await rpc(a,'forward_share',[m,1]);
+  const filesFor=(actor,owner)=>as(actor,'select id from public.forward_files where owner_id=$1 order by id',[owner]);
+  assert.equal((await filesFor(m,a)).rows.length,0);
+  await rpc(a,'forward_publish_applicant',[2]);
+  assert.deepEqual((await filesFor(m,a)).rows.map(row=>row.id),[portrait,project]);
+  assert.equal((await filesFor(b,a)).rows.length,0);
+  await rpc(a,'forward_save_draft',[JSON.stringify({...doc,images:{portrait:null,showcase:null}}),2],['jsonb','integer']);
+  await db.exec('reset role');
+  await assert.rejects(()=>db.query('delete from public.forward_files where id=$1',[portrait]),/shared profile first/);
+  await rpc(a,'forward_publish_applicant',[3]);
+  assert.equal((await filesFor(m,a)).rows.length,0);
+  const managerDoc={...hiring(),images:{portrait:null,showcase:team}};
+  await rpc(m,'forward_save_draft',[JSON.stringify(managerDoc),1],['jsonb','integer']);
+  assert.equal((await filesFor(b,m)).rows.length,0);
+  await rpc(m,'forward_publish_hiring',[2]);
+  assert.equal((await filesFor(b,m)).rows[0].id,team);
+  await rpc(m,'forward_unpublish');
+  assert.equal((await filesFor(b,m)).rows.length,0);
+});
 test('unpublishing an applicant also removes all grants instead of silently restoring access later',async()=>{
   await setupApplicant();await setupManager();await rpc(a,'forward_share',[m,1]);await rpc(a,'forward_unpublish');
   assert.equal((await as(m,'select * from public.forward_shares')).rows.length,0);

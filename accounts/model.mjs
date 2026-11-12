@@ -20,7 +20,11 @@ export function normalizeApplicant(value={}) {
   return {fields:Object.fromEntries(Object.keys(applicantFields).map(key=>[key,typeof value.fields?.[key]==='string'?value.fields[key]:''])),
     preferences:Object.fromEntries(Object.keys(questions).filter(k=>k!=='experience').map(k=>[k,Object.hasOwn(questions[k],value.preferences?.[k])?value.preferences[k]:''])),
     featuredRoles:Array.from({length:3},(_,i)=>Object.fromEntries(['title','dates','summary'].map(k=>[k,typeof value.featuredRoles?.[i]?.[k]==='string'?value.featuredRoles[i][k]:'']))),
-    resumeId:typeof value.resumeId==='string'?value.resumeId:null};
+    resumeId:typeof value.resumeId==='string'?value.resumeId:null,
+    images:normalizeImages(value.images)};
+}
+export function normalizeImages(value) {
+  return {portrait:typeof value?.portrait==='string'?value.portrait:null,showcase:typeof value?.showcase==='string'?value.showcase:null};
 }
 export const wordCount=value=>String(value||'').trim().split(/\s+/u).filter(Boolean).length;
 export function applicantIssues(value,forSharing=false) {
