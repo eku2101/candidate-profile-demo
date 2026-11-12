@@ -412,18 +412,48 @@ function renderResumeUpload(panel){
   input.type='file';
   input.id=label.htmlFor;
   input.accept='.pdf,.jpg,.jpeg,.png,.webp';
-  input.setAttribute('aria-describedby','resumeUploadHelp');
-  input.addEventListener('change',()=>run(input,async()=>{
-    try{await reviewResume(input.files[0]);}
-    finally{input.value='';}
-  }));
+  input.setAttribute('aria-describedby','resumeUploadHelp resumeUploadStatus');
+  const progress=node('p',undefined,'status');
+  progress.id='resumeUploadStatus';
+  progress.setAttribute('role','status');
+  const report=(message,error=false)=>{
+    progress.textContent=message;
+    progress.classList.toggle('error',error);
+  };
+  const importSelected=async()=>{
+    const file=input.files[0];
+    if(!file)return;
+    report('Reading '+file.name+'…');
+    try{
+      await reviewResume(file,{report});
+      input.value='';
+    }catch(error){report(error.message||'Forward could not read the résumé. Try again.',true);}
+    finally{retry.hidden=!input.files.length;}
+  };
+  const retry=button('Fill profile from selected file',importSelected,'primary');
+  retry.hidden=true;
+  input.addEventListener('change',()=>{
+    if(!input.files.length){retry.hidden=true;report('');return;}
+    retry.hidden=false;
+    if(busy){report('File selected. Choose “Fill profile from selected file” when the current action finishes.');return;}
+    run(input,importSelected);
+  });
   const help=node('p',account.role==='hiring'?'A PDF with selectable text fills in your manager bio and professional background. The original file stays private. For a scan or image, attach the file and paste the text.':'A PDF with selectable text fills in details such as jobs, education, and skills and saves them to your private draft. For a scan or image, you can attach the file and paste the text.','help');
   help.id='resumeUploadHelp';
-  upload.append(title,help,label,input);
+  upload.append(title,help,label,input,progress,retry);
   const attached=currentFile();
   if(attached){
     upload.append(node('p','Saved résumé: '+attached.name,'help'));
     if(step===0)upload.append(button('See your saved résumé details',showResumeDetails,'primary'));
+    if(attached.mime==='application/pdf')upload.append(button('Fill again from saved PDF',async()=>{
+      report('Opening your saved PDF…');
+      try{
+        const blob=await api.fileRequest({id:attached.id});
+        if(!(blob instanceof Blob))throw new Error('The saved PDF could not be opened. Choose the file again to retry.');
+        const file=new File([blob],attached.name,{type:'application/pdf'});
+        await reviewResume(file,{existing:attached,report});
+      }catch(error){report(error.message||'Forward could not open your saved PDF.',true);}
+    }));
   }
   if(step===1){
     const options=node('details');
@@ -443,7 +473,18 @@ function renderResumeUpload(panel){
 }
 
 function readResumeForRole(result){
-  return account.role==='hiring'?{...result,fields:hiringResumeFields(result.fields)}:result;
+  const hiring=account.role==='hiring';
+  const titleKey=hiring?'managerTitle':'role';
+  const fields=hiring?hiringResumeFields(result.fields):{...result.fields};
+  const warnings=[...result.warnings];
+  if(result.suggestedRole){
+    if(draft.fields[titleKey]?.trim())fields[titleKey]='';
+    else warnings.push('Forward found a possible title in your work history. Check that it fits your profile.');
+  }
+  if(!result.fields.summary&&!draft.fields[hiring?'managerBio':'summary']?.trim()){
+    warnings.push('Add a short introduction if your résumé has no summary.');
+  }
+  return {...result,fields,warnings};
 }
 
 function showResumeDetails(){
@@ -454,24 +495,34 @@ function showResumeDetails(){
   firstField.scrollIntoView({block:'center'});
 }
 
-async function reviewResume(file){
+function reportResumeSaved(filled,hasFile){
+  const count=Object.values(filled).filter(value=>value?.trim()).length;
+  const message=count
+    ? 'Saved '+count+' résumé '+(count===1?'field':'fields')+'. Review the filled details below and complete any blanks.'
+    : hasFile?'Résumé saved. Add details manually or paste the résumé text to autofill.':'There were no résumé details to fill.';
+  const notice=$('resumeUploadStatus');
+  if(notice)notice.textContent=message;
+  status(message);
+}
+
+async function reviewResume(file,{existing=null,report=status}={}){
   if(!file)return;
   if(file.size>10485760||!['application/pdf','image/jpeg','image/png','image/webp'].includes(file.type))throw new Error('Choose a PDF, JPG, PNG, or WebP no larger than 10 MB.');
   if(file.type!=='application/pdf'){
     reviewImport({fields:{},warnings:['You can attach this image and paste its text in the second profile step to autofill details.']},file);
     return;
   }
-  status('Reading your PDF on this device…');
+  report('Reading your PDF on this device…');
   let result;
-  try{result=readResumeForRole(await ForwardResume.extractPdf(file,status));}
+  try{result=readResumeForRole(await ForwardResume.extractPdf(file,report));}
   catch(error){
     if(!error.message.startsWith('This PDF has little or no selectable text.'))throw error;
-    reviewImport({fields:{},warnings:['This PDF appears to be a scan. You can attach it and paste its text in the second profile step.']},file);
+    reviewImport({fields:{},warnings:['This PDF appears to be a scan. You can attach it and paste its text in the second profile step.']},file,null,createResumeSaver(file,existing,report));
     return;
   }
   const imported=Object.entries(result.fields).filter(([,value])=>value.trim());
   const hasConflict=imported.some(([key,value])=>draft.fields[key]?.trim()&&draft.fields[key].trim()!==value.trim());
-  const save=createResumeSaver(file);
+  const save=createResumeSaver(file,existing,report);
   if(hasConflict||!imported.length){reviewImport(result,file,null,save);return;}
   try{await save(result.fields);}
   catch(error){
@@ -480,17 +531,17 @@ async function reviewResume(file){
     return;
   }
   showResumeDetails();
-  status(result.warnings.length?'Résumé saved. Review the details Forward found and add anything missing.':'Résumé saved. Your imported details are ready to review below.');
+  reportResumeSaved(result.fields,true);
 }
 
-function createResumeSaver(file){
-  let uploadedFile=null;
+function createResumeSaver(file,existing=null,report=status){
+  let uploadedFile=existing;
   return async (reviewed,wholeProfile=null)=>{
     const editor=$('workspaceContent');
     editor.inert=true;
     try{
       if(file&&!uploadedFile){
-        status('Uploading your résumé to your private account…');
+        report('Uploading your résumé to your private account…');
         uploadedFile=await api.fileRequest({method:'POST',file});
         files.push(uploadedFile);
       }
@@ -502,6 +553,7 @@ function createResumeSaver(file){
         next=importReviewedFields(wholeProfile?{...wholeProfile,images:draft.images}:draft,reviewed);
       }
       if(uploadedFile)next.resumeId=uploadedFile.id;
+      report('Saving the filled profile…');
       const saved=await api.save(next,version);
       draft=next;
       version=saved.version;
@@ -526,7 +578,7 @@ function reviewImport(result,file,wholeProfile=null,save=createResumeSaver(file)
       await save(reviewed,wholeProfile);
       closeDialog();
       showResumeDetails();
-      status(Object.values(reviewed).some(value=>value.trim())?'Résumé details filled in and saved. Review your profile for any missing information.':'Résumé attached to your private draft.');
+      reportResumeSaved(reviewed,Boolean(file));
     },'primary'));
     body.append(actions);
   });
@@ -916,7 +968,7 @@ async function handleSession(session,event){
   if(event==='PASSWORD_RECOVERY'||recovery){recovery=true;showPage('recoveryPage');return;}
   const found=await api.account(user.id);if(epoch!==sessionEpoch)return;account=found;
   if(!account){showPage('rolePage');return;}
-  if(!await loadOwned())return;step=0;route='profile';renderNav();renderEditor();
+  if(!await loadOwned())return;step=draft.resumeId?1:0;route='profile';renderNav();renderEditor();
 }
 async function initialize(){
   if(!configReady(accountConfig)){showPage('setupNotice');return;}
