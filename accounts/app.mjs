@@ -1,5 +1,5 @@
 import {accountConfig} from './config.js?v=public-signup-1';
-import {configReady,applicantFields,questions,questionLabels,normalizeApplicant,normalizeImages,applicantIssues,importReviewedFields,wordCount,discussionPrompts} from './model.mjs?v=profile-images-1';
+import {configReady,applicantFields,hiringBackgroundFields,hiringResumeFields,questions,questionLabels,normalizeApplicant,normalizeImages,applicantIssues,importReviewedFields,wordCount,discussionPrompts} from './model.mjs?v=hiring-resume-1';
 import {createAccountAPI} from './api.mjs?v=profile-images-1';
 import {validateAuthInput,submitAuthentication,authErrorMessage,newPasswordError} from './auth-flow.mjs?v=public-signup-1';
 const $=id=>document.getElementById(id);
@@ -29,12 +29,14 @@ function heading(eyebrow,title,intro){$('workspaceEyebrow').textContent=eyebrow;
 function fieldsGrid(definitions,values,onChange,prefix){
   const grid=node('div',undefined,'form-grid');
   for(const [key,rule] of Object.entries(definitions)){
-    const long=Boolean(rule.words)||['summary','experience','education','credentials','mission','values','wellbeing','support','community'].includes(key);
+    const long=Boolean(rule.words)||rule.max>1000||['summary','experience','education','credentials','mission','values','wellbeing','support','community'].includes(key);
     const group=node('div',undefined,long?'full':'');
     const label=node('label',rule.label+(rule.required?' *':''));label.htmlFor=prefix+key;
     const input=node(long?'textarea':'input');input.id=label.htmlFor;input.value=values[key]||'';if(!long)input.type=key==='email'?'email':'text';
     const count=node('p',undefined,'counter');count.id=prefix+'count-'+key;input.setAttribute('aria-describedby',count.id);
-    const refresh=()=>{const total=rule.words?wordCount(input.value):Array.from(input.value).length;count.textContent=`${total} / ${rule.words||rule.max} ${rule.words?'words':'characters'}`;count.classList.toggle('over-limit',total>(rule.words||rule.max));};
+    const wordLimit=rule.words===true?rule.max:rule.words;
+    const limit=wordLimit||rule.max;
+    const refresh=()=>{const total=wordLimit?wordCount(input.value):Array.from(input.value).length;count.textContent=`${total} / ${limit} ${wordLimit?'words':'characters'}`;count.classList.toggle('over-limit',total>limit);};
     input.addEventListener('input',()=>{values[key]=input.value;onChange();refresh();});refresh();group.append(label,input,count);grid.append(group);
   }return grid;
 }
@@ -178,7 +180,12 @@ async function loadOwned(){
   const epoch=sessionEpoch;
   const [saved,published,documents,grants]=await Promise.all([api.draft(account.role,user.id),api.publication(account.role,user.id),api.files(user.id),api.shares()]);
   if(epoch!==sessionEpoch)return false;
-  draft=account.role==='applicant'?normalizeApplicant(saved?.document):{fields:ForwardTeams.normalizeFields(saved?.document?.fields),answers:ForwardTeams.normalizeAnswers(saved?.document?.answers),images:normalizeImages(saved?.document?.images)};
+  if(account.role==='applicant')draft=normalizeApplicant(saved?.document);
+  else{
+    const document=saved?.document;
+    const background=Object.fromEntries(Object.keys(hiringBackgroundFields).map(key=>[key,typeof document?.fields?.[key]==='string'?document.fields[key]:'']));
+    draft={fields:{...ForwardTeams.normalizeFields(document?.fields),...background},answers:ForwardTeams.normalizeAnswers(document?.answers),images:normalizeImages(document?.images),resumeId:typeof document?.resumeId==='string'?document.resumeId:null};
+  }
   version=saved?.version||0;publication=published;files=documents;shares=grants;dirty=false;revision=0;return true;
 }
 async function saveDraft(){
@@ -216,11 +223,18 @@ function renderEditor(){
   const labels=account.role==='applicant'?['Work preferences','About you','Your top three','Values & teamwork','Review & share']:['Team questionnaire','Manager & role','Review & publish'];
   step=Math.min(step,labels.length-1);const steps=node('nav',undefined,'steps');steps.setAttribute('aria-label','Profile steps');
   labels.forEach((label,i)=>{const b=button(`${i+1}. ${label}`,()=>{step=i;renderEditor();});if(i===step)b.setAttribute('aria-current','step');steps.append(b);});panel.append(steps,node('p',`STEP ${step+1} OF ${labels.length}`,'eyebrow'),node('h2',labels[step]));
-  if(account.role==='applicant'&&step<=1)renderResumeUpload(panel);
+  if(step<=1)renderResumeUpload(panel);
   if(step===0){panel.append(node('p','There is no ideal answer. Differences help start a conversation and never exclude someone.'));
     panel.append(node('p',account.role==='applicant'?'Your selected answers stay private. Managers you share with receive discussion questions about differences, without seeing your selected answers. You can compare your answers with a manager’s published answers when exploring a team.':'These team answers will be included when you publish your manager profile.','notice'));
     panel.append(questionForm(account.role==='applicant'?draft.preferences:draft.answers,account.role==='hiring'));
-  }else if(account.role==='hiring'&&step===1){renderImageEditor(panel);panel.append(fieldsGrid(ForwardTeams.fields,draft.fields,changed,'manager-'));}
+  }else if(account.role==='hiring'&&step===1){
+    renderImageEditor(panel);
+    panel.append(fieldsGrid(ForwardTeams.fields,draft.fields,changed,'manager-'));
+    const background=node('details');
+    background.open=Object.keys(hiringBackgroundFields).some(key=>draft.fields[key]);
+    background.append(node('summary','Professional background'),fieldsGrid(hiringBackgroundFields,draft.fields,changed,'manager-'));
+    panel.append(background);
+  }
   else if(account.role==='applicant'&&step===1){
     renderImageEditor(panel);
     panel.append(fieldsGrid(Object.fromEntries(Object.entries(applicantFields).slice(0,7)),draft.fields,changed,'applicant-'));
@@ -228,13 +242,18 @@ function renderEditor(){
     history.open=Boolean(draft.fields.experience||draft.fields.education||draft.fields.credentials);
     history.append(node('summary','Full work history, education & achievements'),fieldsGrid(Object.fromEntries(Object.entries(applicantFields).slice(7,10)),draft.fields,changed,'history-'));
     panel.append(history);
-    const docs=node('details');docs.append(node('summary','Manage my documents'));renderFiles(docs);panel.append(docs);
   }else if(account.role==='applicant'&&step===2){
     panel.append(node('p','Feature up to three roles that best show your growth, contribution, and impact. You can edit your full work history under About you.'));
     const suggestions=ForwardProfile.suggestRoles(draft.fields.experience);
     draft.featuredRoles.forEach((role,i)=>{const section=node('details');section.open=i===0;section.append(node('summary',`Featured role ${i+1}`));if(suggestions.length){const label=node('label','Choose from your work history');label.htmlFor='suggest-'+i;const select=node('select');select.id=label.htmlFor;select.append(new Option('Choose a role…',''));suggestions.forEach((r,j)=>select.append(new Option(r.title+' · '+r.dates,String(j))));select.addEventListener('change',()=>{if(select.value==='')return;draft.featuredRoles[i]={...suggestions[Number(select.value)]};changed();renderEditor();});section.append(label,select);}section.append(fieldsGrid({title:{label:'Role & organization',max:160},dates:{label:'Dates',max:80},summary:{label:'What did you contribute, and what changed?',words:100}},role,changed,'featured-'+i+'-'));section.append(button('Clear highlight',()=>{draft.featuredRoles[i]={title:'',dates:'',summary:''};changed();renderEditor();}));panel.append(section);});
   }else if(account.role==='applicant'&&step===3){panel.append(fieldsGrid(Object.fromEntries(Object.entries(applicantFields).slice(10)),draft.fields,changed,'story-'));}
   else renderPublishing(panel);
+  if(step===1){
+    const docs=node('details');
+    docs.append(node('summary','Manage my documents'));
+    renderFiles(docs);
+    panel.append(docs);
+  }
   const actions=node('div',undefined,'actions');if(step>0)actions.append(button('← Back',()=>{step--;renderEditor();}));if(step<labels.length-1)actions.append(button('Continue →',()=>{if(step===0){const answers=account.role==='applicant'?draft.preferences:draft.answers;const missing=Object.keys(answers).find(k=>!answers[k]);if(missing){$('answer-'+missing).focus();throw new Error('Choose an answer to each question. Different preferences are welcome.');}}step++;renderEditor();},'primary'));panel.append(actions);host.append(panel);
   const strip=node('div',undefined,'save-strip');strip.append(node('p','Drafts are private until you choose to share.','help'));const controls=node('div',undefined,'actions');controls.append(button('Save private draft',saveDraft,'primary'));strip.append(controls);host.append(strip);updateSaveStatus();
 }
@@ -304,9 +323,13 @@ function renderPublishing(panel){
   panel.append(button(applicant?'Review sharing version →':'Review publication →',()=>{
     const issues=applicant?applicantIssues(draft,true):ForwardTeams.issues(draft.fields,draft.answers);
     if(issues.length)throw new Error(issues[0].message);
+    if(!applicant){
+      const oversized=Object.entries(hiringBackgroundFields).find(([key,field])=>Array.from(draft.fields[key].trim()).length>field.max);
+      if(oversized)throw new Error('Shorten '+oversized[1].label.toLowerCase()+' to '+oversized[1].max+' characters.');
+    }
     const approvedRevision=revision;
     dialog(applicant?'Save the version managers can see?':'Publish your hiring profile?',body=>{
-    body.append(node('p',applicant?'Only managers you explicitly share with can see this version, including any profile images and the selected résumé. Your questionnaire answers and separate contact fields stay private.':'Signed-in Forward users will be able to see your manager profile, role description, team questionnaire answers, and any profile images.'));
+    body.append(node('p',applicant?'Only managers you explicitly share with can see this version, including any profile images and the selected résumé. Your questionnaire answers and separate contact fields stay private.':'Signed-in Forward users will see your manager profile, professional background, role description, team questionnaire answers, and profile images. Your original résumé stays private.'));
       body.append(button(applicant?'Save sharing version':'Publish hiring profile',async()=>{
         if(approvedRevision!==revision)throw new Error('Your draft changed. Close this review and review it again.');
         await saveDraft();if(approvedRevision!==revision)throw new Error('New edits arrived during saving. Review them before publishing.');
@@ -332,7 +355,7 @@ function renderResumeUpload(panel){
     try{await reviewResume(input.files[0]);}
     finally{input.value='';}
   }));
-  const help=node('p','A PDF with selectable text fills in details such as jobs, education, and skills and saves them to your private draft. For a scan or image, you can attach the file and paste the text.','help');
+  const help=node('p',account.role==='hiring'?'A PDF with selectable text fills in your manager bio and professional background. The original file stays private. For a scan or image, attach the file and paste the text.':'A PDF with selectable text fills in details such as jobs, education, and skills and saves them to your private draft. For a scan or image, you can attach the file and paste the text.','help');
   help.id='resumeUploadHelp';
   upload.append(title,help,label,input);
   const attached=currentFile();
@@ -342,33 +365,38 @@ function renderResumeUpload(panel){
   }
   if(step===1){
     const options=node('details');
-    options.append(node('summary','Paste text or import a demo profile'));
+    options.append(node('summary',account.role==='applicant'?'Paste text or import a demo profile':'Paste résumé text'));
     const pasteLabel=node('label','Résumé text');
     pasteLabel.htmlFor='cloudPaste';
     const paste=node('textarea');
     paste.id=pasteLabel.htmlFor;
     options.append(pasteLabel,paste,button('Review pasted résumé',()=>{
       if(paste.value.trim().length<25)throw new Error('Paste your résumé text first.');
-      reviewImport(ForwardResume.parseResumeText(paste.value),null);
-    }),button('Import this browser’s demo profile',importBrowserDraft));
+      reviewImport(readResumeForRole(ForwardResume.parseResumeText(paste.value)),null);
+    }));
+    if(account.role==='applicant')options.append(button('Import this browser’s demo profile',importBrowserDraft));
     upload.append(options);
   }
   panel.append(upload);
+}
+
+function readResumeForRole(result){
+  return account.role==='hiring'?{...result,fields:hiringResumeFields(result.fields)}:result;
 }
 
 async function reviewResume(file){
   if(!file)return;
   if(file.size>10485760||!['application/pdf','image/jpeg','image/png','image/webp'].includes(file.type))throw new Error('Choose a PDF, JPG, PNG, or WebP no larger than 10 MB.');
   if(file.type!=='application/pdf'){
-    reviewImport({fields:{},warnings:['This image can be attached to your profile. Paste its text under About you to autofill details.']},file);
+    reviewImport({fields:{},warnings:['You can attach this image and paste its text in the second profile step to autofill details.']},file);
     return;
   }
   status('Reading your PDF on this device…');
   let result;
-  try{result=await ForwardResume.extractPdf(file,status);}
+  try{result=readResumeForRole(await ForwardResume.extractPdf(file,status));}
   catch(error){
     if(!error.message.startsWith('This PDF has little or no selectable text.'))throw error;
-    reviewImport({fields:{},warnings:['This PDF appears to be a scan. You can attach it and paste its text under About you.']},file);
+    reviewImport({fields:{},warnings:['This PDF appears to be a scan. You can attach it and paste its text in the second profile step.']},file);
     return;
   }
   const imported=Object.entries(result.fields).filter(([,value])=>value.trim());
@@ -396,7 +424,13 @@ function createResumeSaver(file){
         uploadedFile=await api.fileRequest({method:'POST',file});
         files.push(uploadedFile);
       }
-      const next=importReviewedFields(wholeProfile?{...wholeProfile,images:draft.images}:draft,reviewed);
+      let next;
+      if(account.role==='hiring'){
+        const filled=Object.fromEntries(Object.entries(reviewed).filter(([,value])=>value?.trim()).map(([key,value])=>[key,value.trim()]));
+        next={...draft,fields:{...draft.fields,...filled}};
+      }else{
+        next=importReviewedFields(wholeProfile?{...wholeProfile,images:draft.images}:draft,reviewed);
+      }
       if(uploadedFile)next.resumeId=uploadedFile.id;
       const saved=await api.save(next,version);
       draft=next;
@@ -408,11 +442,14 @@ function createResumeSaver(file){
 }
 
 function reviewImport(result,file,wholeProfile=null,save=createResumeSaver(file)){
-  const reviewed=Object.fromEntries(Object.keys(applicantFields).slice(0,10).map(key=>[key,result.fields[key]||'']));
+  const definitions=account.role==='hiring'
+    ? {...Object.fromEntries(['managerName','managerTitle','location','managerBio'].map(key=>[key,ForwardTeams.fields[key]])),...hiringBackgroundFields}
+    : Object.fromEntries(Object.entries(applicantFields).slice(0,10));
+  const reviewed=Object.fromEntries(Object.keys(definitions).map(key=>[key,result.fields[key]||'']));
   dialog('Review your résumé details',body=>{
-    body.append(node('p',wholeProfile?'Review this browser’s saved information before copying it to your signed-in account. This replaces the current account draft fields and preferences. Photos are not copied.':'Check the extracted details before saving. Non-empty fields replace matching draft fields; your existing personal story, preferences, and highlights stay as written.'));
+    body.append(node('p',wholeProfile?'Review this browser’s saved information before copying it to your signed-in account. This replaces the current account draft fields and preferences. Photos are not copied.':'Check the extracted details before saving. Filled fields replace the corresponding values in your draft.'));
     for(const warning of result.warnings||[])body.append(node('p',warning,'notice'));
-    body.append(fieldsGrid(Object.fromEntries(Object.entries(applicantFields).slice(0,10)),reviewed,()=>{},'import-'));
+    body.append(fieldsGrid(definitions,reviewed,()=>{},'import-'));
     const check=node('input');check.type='checkbox';check.id='ownResumeConfirmation';const label=node('label');label.append(check,document.createTextNode('This information is mine. '+(file?`Upload ${file.name} to my private account.`:'Save these details to my private account.')));body.append(label);
     body.append(button('Save résumé to my account',async()=>{
       if(!check.checked){check.focus();throw new Error('Confirm that this is your information before importing.');}
@@ -447,6 +484,12 @@ function renderTeamStory(host,profile){
   identity.append(node('h2',profile.managerName||'Your name'),node('p',[profile.managerTitle,profile.company].filter(Boolean).join(' · '),'card-meta'));
   prependPortrait(identity,profile);
   host.append(identity,node('p',profile.managerBio,'profile-text'));
+  for(const [key,field] of Object.entries(hiringBackgroundFields)){
+    if(!profile[key])continue;
+    const section=node('details');
+    section.append(node('summary',field.label),node('p',profile[key],'profile-text'));
+    host.append(section);
+  }
   host.append(node('h3',profile.roleTitle||'Your opportunity'),node('p',[profile.location,profile.employmentType].filter(Boolean).join(' · '),'help'),node('p',profile.roleSummary,'profile-text'),node('h3','Culture, support & connection'),node('p',profile.teamStory||'Ask how this team supports people.','profile-text'));
   appendShowcase(host,profile,'Team image');
   const answers=node('div',undefined,'team-answers');for(const key of Object.keys(questions)){const section=node('section',undefined,'team-answer');section.append(node('h3',questionLabels[key]),node('p',questions[key][profile.answers?.[key]]||'Not answered yet'));answers.append(section);}host.append(answers);

@@ -6,6 +6,20 @@ export const applicantFields = {
   mission:{label:'Why I do this work',words:50},values:{label:'Professional values',words:50},
   wellbeing:{label:'How I support team well-being',words:75},support:{label:'How I support colleagues',words:75},community:{label:'Community impact',words:75}
 };
+export const hiringBackgroundFields = {
+  managerExperience:{label:'Professional experience',max:16000},
+  managerEducation:{label:'Education',max:6000},
+  managerSkills:{label:'Core skills',max:600},
+  managerCredentials:{label:'Certifications & achievements',max:6000}
+};
+
+export function hiringResumeFields(fields) {
+  return {
+    managerName:fields.name,managerTitle:fields.role,location:fields.location,managerBio:fields.summary,
+    managerExperience:fields.experience,managerEducation:fields.education,
+    managerSkills:fields.skills,managerCredentials:fields.credentials
+  };
+}
 export const questionLabels={focus:'Quiet focus time',brainstorming:'Group brainstorming',communication:'Everyday communication',checkIns:'Team check-ins',rhythm:'Workload rhythm',environment:'Team environment',experience:'Preferred experience level'};
 export const questions={
   focus:{protected:'Regular uninterrupted blocks',open:'Short blocks between interactions',flexible:'Flexible — depends on the task'},
