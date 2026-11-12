@@ -8,6 +8,7 @@ const node=(tag,text,className)=>{const e=document.createElement(tag);if(text!==
 const button=(text,fn,kind='secondary')=>{const e=node('button',text,'button '+kind);e.type='button';e.addEventListener('click',()=>run(e,fn));return e;};
 let client,api,user,account,draft,version=0,publication=null,files=[],shares=[],teams=[],step=0,route='profile',dirty=false,revision=0,busy=false,authMode='signin',sessionEpoch=0,recovery=false,pendingEmail='';
 let stopChat=()=>{};
+let chatChannelCleanup=Promise.resolve();
 let stopFeedback=()=>{};
 let employerVerification=null;
 function status(message,error=false){
@@ -1075,8 +1076,9 @@ async function openConversation(host,chat){
   const rendered=new Map();
   let active=true;
   let refreshing=false;
+  let refreshAgain=false;
   let firstPage=true;
-  let timer;
+  let channel;
   const older=button('Load earlier messages',async()=>{
     const previousTop=list.scrollTop;
     const previousHeight=list.scrollHeight;
@@ -1115,8 +1117,12 @@ async function openConversation(host,chat){
     if(scrollToLatest)list.scrollTop=list.scrollHeight;
   }
 
-  async function refresh(){
-    if(!active||refreshing||document.hidden)return;
+  async function refresh(catchUp=false){
+    if(!active)return;
+    if(refreshing){
+      if(catchUp)refreshAgain=true;
+      return;
+    }
     refreshing=true;
     try{
       const [connections,rows]=await Promise.all([api.connections(),api.messages(chat.id)]);
@@ -1132,7 +1138,13 @@ async function openConversation(host,chat){
       info.textContent='';
     }catch{
       if(active)info.textContent='Could not refresh messages. Forward will try again.';
-    }finally{refreshing=false;}
+    }finally{
+      refreshing=false;
+      if(refreshAgain&&active){
+        refreshAgain=false;
+        void refresh();
+      }
+    }
   }
 
   form.addEventListener('submit',event=>{
@@ -1148,13 +1160,21 @@ async function openConversation(host,chat){
       status('');
     });
   });
+  const refreshWhenVisible=()=>{if(!document.hidden)void refresh();};
+  const timer=setInterval(refreshWhenVisible,5000);
+  document.addEventListener('visibilitychange',refreshWhenVisible);
   stopChat=()=>{
     active=false;
     clearInterval(timer);
-    document.removeEventListener('visibilitychange',refresh);
+    document.removeEventListener('visibilitychange',refreshWhenVisible);
+    if(channel)chatChannelCleanup=client.removeChannel(channel).catch(()=>{});
   };
-  timer=setInterval(refresh,5000);
-  document.addEventListener('visibilitychange',refresh);
+  void chatChannelCleanup.then(()=>client.realtime.setAuth()).then(()=>{
+    if(!active)return;
+    channel=client.channel('forward-chat:'+chat.id,{config:{private:true}})
+      .on('broadcast',{event:'message-added'},()=>void refresh(true))
+      .subscribe(state=>{if(state==='SUBSCRIBED')void refresh(true);});
+  }).catch(()=>{});
   await refresh();
 }
 
