@@ -1,6 +1,6 @@
 import {accountConfig} from './config.js?v=public-signup-1';
 import {configReady,applicantFields,hiringBackgroundFields,hiringResumeFields,questions,questionLabels,normalizeApplicant,normalizeImages,applicantIssues,importReviewedFields,wordCount,discussionPrompts} from './model.mjs?v=hiring-resume-1';
-import {createAccountAPI} from './api.mjs?v=hiring-feedback-1';
+import {createAccountAPI} from './api.mjs?v=message-alerts-1';
 import {validateAuthInput,submitAuthentication,authErrorMessage,newPasswordError} from './auth-flow.mjs?v=public-signup-1';
 import {installHelpChat} from './help-chat.mjs?v=vera-portrait-1';
 const $=id=>document.getElementById(id);
@@ -10,6 +10,9 @@ let client,api,user,account,draft,version=0,publication=null,files=[],shares=[],
 let stopChat=()=>{};
 let chatChannelCleanup=Promise.resolve();
 let stopFeedback=()=>{};
+let stopMessageAlerts=()=>{};
+let messageAlertUpdates=[];
+let messageAlertChatId;
 let employerVerification=null;
 function status(message,error=false){
   const local=!$('authPage').hidden?$('authStatus'):!$('confirmationPage').hidden?$('confirmationStatus'):null;
@@ -764,9 +767,38 @@ async function renderSharing(){
   });
 }
 
+const feedbackPracticeScenarios=[
+  {
+    role:'Live Training Lead',
+    requirement:'This opening requires leading live workshops. Casey’s examples show strong learning design and facilitation materials.',
+    reason:'Your facilitator guide and onboarding pilot stood out. This role also requires independently leading live workshops, and I didn’t see an example of that in your profile.',
+    nextStep:'Try co-leading a workshop and add a short example of how you responded to questions or adapted the session.'
+  },
+  {
+    role:'Program Evaluation Analyst',
+    requirement:'This opening requires reporting program results across several cohorts. Amara’s examples show event logistics, outreach, and attendance for an individual workshop.',
+    reason:'Your registration changes made the workshops easier to access. This role requires comparing outcomes across several cohorts, and your examples focused on individual events.',
+    nextStep:'Track one measure across three events and share a short summary of what changed and how you used the results.'
+  },
+  {
+    role:'Operations Team Supervisor',
+    requirement:'This opening requires giving regular feedback to direct reports. Mateo’s examples show process improvements, peer training, and shift handoffs.',
+    reason:'Your returns guide shows how you improve a process. This role requires coaching direct reports over time, and the examples you shared focused on process improvements and peer support.',
+    nextStep:'Try mentoring a new teammate and document the goals you agreed on, how you checked in, and what improved.'
+  }
+];
+
 function declineApplicant(person,onSent){
-  dialog('Decline '+person.profile.name+'?',body=>{
-    body.append(node('p','This goes directly to the applicant. Name a job requirement or evidence from their profile that informed your decision, then suggest one step they can take. Use work preferences to start conversations.'));
+  const scenario=person.practice;
+  const title=scenario?'Practice feedback for '+person.profile.name:'Decline '+person.profile.name+'?';
+  dialog(title,body=>{
+    if(scenario){
+      body.append(node('p','Fictional applicant · Your practice response stays here and is never sent.','notice'),
+        node('h3',scenario.role),node('p',scenario.requirement),
+        node('p','Write a reason based on the role and what you saw in the profile. Suggest one specific step the person could take.','help'));
+    }else{
+      body.append(node('p','This goes directly to the applicant. Name a job requirement or evidence from their profile that informed your decision, then suggest one step they can take. Use work preferences to start conversations.'));
+    }
     const form=node('form');
     const makeField=(id,labelText,example)=>{
       const label=node('label',labelText);
@@ -786,10 +818,14 @@ function declineApplicant(person,onSent){
     const nextStep=makeField('declineNextStep','What could they try next?',
       'Co-lead a training session and add an example of how you adapted it based on learner feedback.');
     const actions=node('div',undefined,'actions');
-    const send=node('button','Decline & send feedback','button danger');
+    const send=node('button',scenario?'Review my practice feedback':'Decline & send feedback',
+      scenario?'button primary':'button danger');
     send.type='submit';
     actions.append(button('Cancel',closeDialog),send);
     form.append(actions);
+    const review=node('section',undefined,'notice practice-review');
+    review.hidden=true;
+    if(scenario)form.append(review);
     form.addEventListener('submit',event=>{
       event.preventDefault();
       run(send,async()=>{
@@ -798,6 +834,22 @@ function declineApplicant(person,onSent){
             field.focus();
             throw new Error('Use at least 20 characters for each response.');
           }
+        }
+        if(scenario){
+          const reviewTitle=node('h3','Compare your draft with this example');
+          reviewTitle.tabIndex=-1;
+          const checklist=node('ul');
+          checklist.append(
+            node('li','Name a requirement and what the profile actually shows.'),
+            node('li','Describe the evidence you had. Avoid judgments about personality or potential.'),
+            node('li','Acknowledge a specific strength when you can.'),
+            node('li','Suggest one realistic action the applicant can take.')
+          );
+          review.replaceChildren(reviewTitle,checklist,node('h4','Reason'),node('p',scenario.reason),
+            node('h4','Next step'),node('p',scenario.nextStep),node('p','You can edit your draft above and compare it again.','help'));
+          review.hidden=false;
+          reviewTitle.focus();
+          return;
         }
         await api.declineWithFeedback(person.owner_id,reason.value.trim(),nextStep.value.trim());
         closeDialog();
@@ -814,11 +866,11 @@ async function renderApplicantDeck(){
   const host=$('workspaceContent');
   host.replaceChildren(node('p','Loading applicants…'));
   const [applicants,existing]=await Promise.all([api.applicants(),api.connections()]);
-  const examples=exampleApplicants.map(profile=>({profile,example:true}));
+  const examples=exampleApplicants.map((profile,index)=>({profile,example:true,practice:feedbackPracticeScenarios[index]}));
   const decisions=new Map(existing.map(item=>[item.applicant_id,item]));
   const filter=node('select');
   filter.id='applicantFilter';
-  for(const [value,label] of [['new','To review'],['interested','Interested'],['pass','Declined'],['matched','Matched']]){
+  for(const [value,label] of [['new','To review'],['interested','Interested'],['pass','Declined'],['matched','Matched'],['practice','Fictional practice profiles']]){
     filter.append(new Option(label,value));
   }
   const label=node('label','Show applicants');
@@ -830,7 +882,7 @@ async function renderApplicantDeck(){
   let index=0;
 
   function draw(focus=false){
-    const list=applicants.filter(person=>{
+    const list=filter.value==='practice'?[...examples]:applicants.filter(person=>{
       const decision=decisions.get(person.owner_id);
       return (decision?.matched?'matched':decision?.manager_choice||'new')===filter.value;
     });
@@ -879,6 +931,7 @@ async function renderApplicantDeck(){
       preview.append(node('summary','Read the example profile'),node('p','Use this fictional profile as a reference.','help'));
       renderApplicantStory(preview,person.profile);
       card.append(preview);
+      actions.append(button('Practice giving feedback',()=>declineApplicant(person),'primary'));
     }else if(decision?.matched){
       actions.append(button('Open chat',()=>navigate('messages',decision.id),'primary'));
     }else{
@@ -901,7 +954,7 @@ async function renderApplicantDeck(){
         (dx>0?interested:pass)?.click();
       });
     }
-    if(!person.example)card.append(actions);
+    card.append(actions);
     const paging=node('div',undefined,'deck-paging');
     if(index>0)paging.append(button('← Previous',()=>{index--;draw(true);}));
     paging.append(node('p',`${index+1} of ${list.length}`,'help'));
@@ -1022,6 +1075,93 @@ function watchFeedback(){
   };
 }
 
+function messageReadKey(connectionId){
+  return 'forward-message-read:'+user.id+':'+connectionId;
+}
+
+function renderMessageNotice(){
+  const unread=messageAlertUpdates.filter(update=>
+    update.message_id>Number(localStorage.getItem(messageReadKey(update.connection_id))||0));
+  messageAlertChatId=unread[0]?.connection_id;
+  $('messageNotice').hidden=!messageAlertChatId;
+  const label=unread.length>1?`New messages in ${unread.length} conversations.`:'You have a new message.';
+  if(messageAlertChatId&&$('messageNoticeText').textContent!==label)$('messageNoticeText').textContent=label;
+}
+
+function rememberChatMessages(connectionId,rows){
+  if(document.hidden)return;
+  const key=messageReadKey(connectionId);
+  const previous=Number(localStorage.getItem(key)||0);
+  const latest=rows.reduce((id,row)=>row.sender_id===user.id?id:Math.max(id,row.id),previous);
+  if(latest>previous){
+    localStorage.setItem(key,String(latest));
+    renderMessageNotice();
+  }
+}
+
+function watchMessageAlerts(){
+  const accountId=user.id;
+  let active=true;
+  let checking=false;
+  let checkAgain=false;
+  let subscribed=false;
+  let lastCheck=0;
+  let channel;
+
+  async function check(catchUp=false){
+    if(!active)return;
+    if(checking){
+      if(catchUp)checkAgain=true;
+      return;
+    }
+    checking=true;
+    lastCheck=Date.now();
+    try{
+      const updates=await api.messageUpdates();
+      if(!active)return;
+      messageAlertUpdates=updates;
+      renderMessageNotice();
+    }catch{/* The next reconnect or scheduled check will try again. */}
+    finally{
+      checking=false;
+      if(checkAgain){
+        checkAgain=false;
+        void check();
+      }
+    }
+  }
+
+  const onVisible=()=>{if(!document.hidden)void check(true);};
+  const onRead=event=>{
+    if(event.key?.startsWith('forward-message-read:'+accountId+':'))renderMessageNotice();
+  };
+  document.addEventListener('visibilitychange',onVisible);
+  window.addEventListener('storage',onRead);
+  const timer=setInterval(()=>{
+    if(!document.hidden&&(!subscribed||Date.now()-lastCheck>=20000))void check();
+  },5000);
+  stopMessageAlerts=()=>{
+    active=false;
+    clearInterval(timer);
+    document.removeEventListener('visibilitychange',onVisible);
+    window.removeEventListener('storage',onRead);
+    if(channel)void client.removeChannel(channel);
+    messageAlertUpdates=[];
+    messageAlertChatId=undefined;
+    $('messageNotice').hidden=true;
+  };
+  void client.realtime.setAuth().then(()=>{
+    if(!active)return;
+    channel=client.channel('forward-inbox:'+accountId,{config:{private:true}})
+      .on('broadcast',{event:'message-received'},()=>void check(true))
+      .subscribe(state=>{
+        subscribed=state==='SUBSCRIBED';
+        if(subscribed)void check(true);
+      });
+  }).catch(()=>{});
+  void check();
+}
+
 async function renderMessages(selection){
   heading('MESSAGES','Your conversations.','Chat privately with applicants or hiring managers after you both choose to connect.');
   const host=$('workspaceContent');
@@ -1135,6 +1275,7 @@ async function openConversation(host,chat){
       const nearEnd=list.scrollHeight-list.clientHeight-list.scrollTop<50;
       if(firstPage){older.hidden=rows.length<50;firstPage=false;}
       draw(rows,nearEnd);
+      rememberChatMessages(chat.id,rows);
       info.textContent='';
     }catch{
       if(active)info.textContent='Could not refresh messages. Forward will try again.';
@@ -1196,6 +1337,7 @@ function setAuthMode(mode){
 async function handleSession(session,event){
   stopChat();
   stopFeedback();
+  stopMessageAlerts();
   const epoch=++sessionEpoch;
   if(user&&session?.user?.id!==user.id){location.replace('accounts.html');return;}
   user=session?.user||null;
@@ -1216,7 +1358,7 @@ async function handleSession(session,event){
   if(event==='PASSWORD_RECOVERY'||recovery){recovery=true;showPage('recoveryPage');return;}
   const found=await api.account(user.id);if(epoch!==sessionEpoch)return;account=found;
   if(!account){showPage('rolePage');return;}
-  if(!await loadOwned())return;step=draft.resumeId?1:0;route='profile';renderNav();renderEditor();watchFeedback();
+  if(!await loadOwned())return;step=draft.resumeId?1:0;route='profile';renderNav();renderEditor();watchFeedback();watchMessageAlerts();
 }
 async function initialize(){
   if(!configReady(accountConfig)){showPage('setupNotice');return;}
@@ -1285,7 +1427,10 @@ async function initialize(){
     });
   });
   $('openFeedback').addEventListener('click',()=>run($('openFeedback'),()=>navigate('feedback')));
-  document.querySelectorAll('[data-account-role]').forEach(b=>b.addEventListener('click',()=>run(b,async()=>{account=await api.register(b.dataset.accountRole);await loadOwned();step=0;route='profile';renderNav();renderEditor();watchFeedback();status('Your account is ready. Start with your work preferences.');})));
+  $('openMessageNotice').addEventListener('click',()=>run($('openMessageNotice'),async()=>{
+    if(messageAlertChatId)await navigate('messages',messageAlertChatId);
+  }));
+  document.querySelectorAll('[data-account-role]').forEach(b=>b.addEventListener('click',()=>run(b,async()=>{account=await api.register(b.dataset.accountRole);await loadOwned();step=0;route='profile';renderNav();renderEditor();watchFeedback();watchMessageAlerts();status('Your account is ready. Start with your work preferences.');})));
   client.auth.onAuthStateChange((event,session)=>{
     if(event==='TOKEN_REFRESHED')return;
     if(event==='PASSWORD_RECOVERY')recovery=true;
