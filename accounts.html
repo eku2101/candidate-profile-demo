@@ -6,15 +6,15 @@
   <meta name="referrer" content="no-referrer" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; connect-src 'self' https://*.supabase.co; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
   <title>Forward — Your account</title>
-  <link rel="stylesheet" href="accounts/accounts.css?v=resume-inline-examples-1" />
+  <link rel="stylesheet" href="accounts/accounts.css?v=help-chat-1" />
   <script src="profile-model.js" defer></script>
   <script src="team-model.js" defer></script>
   <script src="resume-tools.js?v=resume-feedback-1" defer></script>
-  <script type="module" src="accounts/app.mjs?v=resume-feedback-1"></script>
+  <script type="module" src="accounts/app.mjs?v=help-chat-1"></script>
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
-  <header class="site-header"><a href="index.html" class="brand">Forward<span>↗</span></a><nav id="accountNav" aria-label="Account navigation" hidden></nav><div id="accountIdentity"><a href="index.html">Explore the demo</a></div></header>
+  <header class="site-header"><a href="index.html" class="brand">Forward<span>↗</span></a><nav id="accountNav" aria-label="Account navigation" hidden></nav><div id="accountIdentity"><a href="index.html">Explore the demo</a></div><button id="openForwardHelp" class="button secondary forward-help-launch" type="button" aria-haspopup="dialog">Ask Vera</button></header>
   <main id="main">
     <div id="status" class="status" role="status" aria-live="polite"></div>
     <p id="accountPreview" class="notice" hidden>Account preview · Please help us check signup and email confirmation before the wider launch.</p>
@@ -31,5 +31,17 @@
   </main>
   <footer>Forward · People first. Different working preferences start conversations.</footer>
   <dialog id="reviewDialog" aria-labelledby="dialogTitle"><form method="dialog" class="dialog-close"><button aria-label="Close dialog">×</button></form><div id="dialogBody"></div></dialog>
+  <dialog id="forwardHelp" aria-labelledby="forwardHelpTitle">
+    <form method="dialog" class="dialog-close"><button aria-label="Close Vera">×</button></form>
+    <h2 id="forwardHelpTitle">Ask Vera</h2>
+    <p class="help">Ask about the site or get profile writing tips. When AI is available, it receives the messages you type. Keep passwords and private details out of the chat.</p>
+    <div id="forwardHelpLog" class="help-log" role="log" aria-label="Help conversation" tabindex="0"></div>
+    <div id="forwardHelpTopics" class="help-topics" aria-label="Common questions"></div>
+    <form id="forwardHelpForm">
+      <label for="forwardHelpQuestion">Your question</label>
+      <textarea id="forwardHelpQuestion" rows="2" maxlength="1000" required></textarea>
+      <div class="help-chat-actions"><button class="button primary" type="submit">Send question</button><p id="forwardHelpStatus" class="help" role="status"></p></div>
+    </form>
+  </dialog>
 </body>
 </html>
