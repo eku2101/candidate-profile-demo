@@ -1497,7 +1497,7 @@
       <div class="roles">
         <button class="role-button" data-role="applicant" type="button">
           <b>I'm an applicant</b>
-          <span>Build your profile, feature your strongest experiences, and share how you work.</span>
+          <span>Start with your work preferences, then build your profile and feature your strongest experiences.</span>
         </button>
         <button class="role-button" data-role="hiring" type="button">
           <b>I'm hiring</b>
@@ -1557,6 +1557,7 @@
             <div>
               <label for="applicantRhythm">Workload rhythm</label>
               <select id="applicantRhythm" required>
+                <option value="" disabled selected>Choose a preference</option>
                 <option value="steady">Steady and predictable</option>
                 <option value="fast">Fast-paced and varied</option>
                 <option value="flexible">Flexible by project</option>
@@ -1565,6 +1566,7 @@
             <div class="full">
               <label for="applicantEnvironment">Ideal company environment</label>
               <select id="applicantEnvironment" required>
+                <option value="" disabled selected>Choose an environment</option>
                 <option value="enterprise">Large enterprise, such as AT&amp;T</option>
                 <option value="mid">Mid-size company</option>
                 <option value="small">Small contractor or close-knit team</option>
@@ -1595,9 +1597,10 @@
             <div>
               <label for="hiringExperience">Preferred experience level</label>
               <select id="hiringExperience" required>
+                <option value="" disabled selected>Choose an experience level</option>
                 <option value="entry">Entry level</option>
                 <option value="mid">Mid level</option>
-                <option value="senior" selected>Senior level</option>
+                <option value="senior">Senior level</option>
                 <option value="lead">Lead or principal</option>
               </select>
             </div>
@@ -1640,19 +1643,21 @@
             <div>
               <label for="hiringRhythm">Workload rhythm</label>
               <select id="hiringRhythm" required>
+                <option value="" disabled selected>Choose a team rhythm</option>
                 <option value="steady">Steady and predictable</option>
                 <option value="fast">Fast-paced and varied</option>
-                <option value="flexible" selected>Flexible by project</option>
+                <option value="flexible">Flexible by project</option>
               </select>
             </div>
             <div>
               <label for="hiringEnvironment">Team environment</label>
               <select id="hiringEnvironment" required>
+                <option value="" disabled selected>Choose a team environment</option>
                 <option value="enterprise">Large enterprise</option>
                 <option value="mid">Mid-size company</option>
                 <option value="small">Small contractor or close-knit team</option>
                 <option value="startup">Startup or early-stage team</option>
-                <option value="remote" selected>Remote-first distributed team</option>
+                <option value="remote">Remote-first distributed team</option>
               </select>
             </div>
             <div class="full">
@@ -2151,16 +2156,15 @@
       setHeroForRole(role);
 
       navigateForward('home');
+      openWorkOnboarding(role, true);
     }
 
     function openApplicantQuiz() {
-      $("applicantQuizModal").hidden = false;
-      window.setTimeout(() => $("applicantFocus").focus(), 0);
+      openWorkOnboarding('applicant');
     }
 
     function openHiringQuiz() {
-      $("hiringQuizModal").hidden = false;
-      window.setTimeout(() => $("hiringExperience").focus(), 0);
+      openWorkOnboarding('hiring');
     }
 
     function renderApplicantPrivacyStatus() {
@@ -2726,23 +2730,22 @@
 
     $("applicantQuizForm").addEventListener("submit", event => {
       event.preventDefault();
+      if (!submitOnboarding('applicant')) return;
       applicantPreferences = {
         ...readWorkPreferences("applicant"),
         rhythm: $("applicantRhythm").value,
         environment: $("applicantEnvironment").value
       };
       applicantQuizComplete = true;
-      saveApplicantProfile();
-      $("applicantQuizModal").hidden = true;
-      if (activeRole === "applicant") {
-        showApplicantPage("builder");
-        showBuilderStep(4);
-        showToast("Private matching profile saved. Your public builder is ready.");
-      }
+      saveApplicantProfile().then(saved => showToast(saved
+        ? 'Work preferences saved in this browser. Your conversation topics are ready.'
+        : 'Your answers work in this tab, but could not be saved. Try Save profile in this browser.'));
+      finishWorkOnboarding('applicant');
     });
 
     $("hiringQuizForm").addEventListener("submit", event => {
       event.preventDefault();
+      if (!submitOnboarding('hiring')) return;
       hiringCriteria = {
         experience: $("hiringExperience").value,
         ...readWorkPreferences("hiring"),
@@ -2750,16 +2753,9 @@
         environment: $("hiringEnvironment").value
       };
       hiringQuizComplete = true;
-      $("hiringQuizModal").hidden = true;
       rankRemainingApplicants();
-      if (activeRole === "hiring") {
-        hideForwardPages();
-        setNavigation('discover');
-        $("hiringWorkspace").hidden = false;
-        renderApplicantCard();
-        renderRoleBrief();
-        showToast("Role brief saved. Discussion topics updated; preferences never reduce an applicant's ranking.");
-      }
+      finishWorkOnboarding('hiring');
+      showToast("Role brief saved for this session. Discussion topics updated; preferences never reduce an applicant's ranking.");
     });
 
     $("editApplicantQuiz").addEventListener("click", openApplicantQuiz);
@@ -2886,6 +2882,7 @@
 
   </script>
   <script src="forward-ui.js"></script>
+  <script src="onboarding.js"></script>
   <script src="profile-controller.js"></script>
 </body>
 </html>

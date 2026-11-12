@@ -8,7 +8,8 @@ Forward is a browser-only prototype for two audiences: applicants building a ful
 
 - **Opening experience on every visit:** a ten-second Forward introduction plays each time the page opens or refreshes. Visitors can pause, resume, skip, or replay it; reduced-motion preferences are respected. An interactive welcome follows, with examples of skills, growth, working habits, and contributions. Its close button appears after five seconds, without a visible countdown.
 - **Clear navigation:** Home introduces the next step; Discover shows applicant cards to employers and clearly labeled sample teams to applicants. Connections and Messages have dedicated pages. The navigation moves to the bottom on small screens.
-- **Guided profile builder:** five steps organize About you, Your top three, Values & teamwork, Work preferences, and Review & launch. Applicants can write before completing preferences; preferences are required when launching. Quiet focus, brainstorming, communication, check-ins, workload, and environment are independent choices with flexible options. Selected answers stay out of public profiles.
+- **Questionnaire-first onboarding:** choosing Applicant or Hiring opens the original work-preference questions before the workspace. Applicants move through three sections: focus/collaboration, communication/connection, and pace/environment. Employers first add hiring context, then answer the same six topics about their team. Each step requires a deliberate answer. Returning applicants can review their saved answers; completed questionnaires can be reopened from a prominent Home card or the existing profile/role-brief controls. Selected answers stay out of public profiles; differences suggest conversations and never disqualify anyone.
+- **Guided profile builder:** five steps organize About you, Your top three, Values & teamwork, Work preferences, and Review & launch. After onboarding, new applicants start at About you. Editing preferences from an existing page returns to that page. Quiet focus, brainstorming, communication, check-ins, workload, and environment remain independent choices.
 - **Résumé import:** choose **Upload document** and select a text-based PDF. The browser reads its pages and opens an editable review of name, role, location, email, phone, skills, introduction, previous jobs, education, and certifications/achievements. Select **Save résumé to my profile** to apply the nonempty reviewed fields and save the original document. Empty fields leave existing details unchanged; mission and culture stories are never invented from the résumé.
 - **Saved applicant profile:** form edits save automatically in IndexedDB, with an explicit **Save profile in this browser** action and a visible saved/error status. Profile fields, three selected highlights, the original résumé, profile photo, work preferences, and launch state survive refresh and reopening in the same browser. Older saved profiles remain readable; they start with no selected highlights. One applicant profile is stored per browser; **Clear saved profile** removes it after confirmation. Clearing site data also removes it. There are no accounts or cross-device synchronization.
 - **Three featured experiences, complete work history:** applicants choose up to three meaningful roles, including work that helped a team, customers, sales, or a community. Editable suggestions come from their imported work history; the app never chooses the “best” roles automatically. One or two highlights are welcome. All previous jobs remain saved and can be expanded in the profile.
@@ -69,7 +70,7 @@ The applicant experience supports both résumé import and writing from scratch 
 
 ### Matching is more transparent and respectful
 
-Applicants complete work-preference questions before launching their profile; hiring teams complete their role brief before reviewing applicants. Those inputs suggest concrete conversations about working together, while selected answers stay off public profiles. The hiring view uses experience alone for review order and shows questions for the employer; the applicant's builder and hub offer questions from the applicant's perspective. Preferences do not produce a suitability score or automatic rejection.
+Applicants and hiring teams complete their questionnaire during onboarding before entering their workspace. Saved applicant answers are prefilled on return and can be revised from Home; hiring briefs remain session-only in this demo. Those inputs suggest concrete conversations about working together, while selected answers stay off public profiles. The hiring view uses experience alone for review order and shows questions for the employer; the applicant's builder and hub offer questions from the applicant's perspective. Preferences do not produce a suitability score or automatic rejection.
 
 ### Interaction feels more active and personal
 
@@ -114,7 +115,7 @@ Use the published website or a local HTTP server. Direct `file://` opening can b
 Run the work-preference regression checks with Node.js (no dependencies):
 
 ```powershell
-node --test test-work-preferences.cjs test-resume-profile.cjs test-forward-redesign.cjs
+node --test test-work-preferences.cjs test-resume-profile.cjs test-forward-redesign.cjs test-onboarding.cjs
 ```
 
 To run a local static preview server with Node.js (this also serves the local portrait image in `assets/`):

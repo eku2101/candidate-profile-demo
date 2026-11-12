@@ -39,6 +39,10 @@ function hideForwardPages() {
 }
 function navigateForward(page) {
   if (page !== 'home' && !activeRole) { showRoleChooser(); return; }
+  if (page !== 'home' && activeRole && !onboardingComplete(activeRole)) {
+    openWorkOnboarding(activeRole, true);
+    return;
+  }
   hideForwardPages();
   setNavigation(page);
   if (page === 'home') {
@@ -75,6 +79,7 @@ function renderForwardHome() {
   $('homeProgressCopy').textContent = activeRole === 'hiring' ? 'Read the full story. Explore working together. Start a conversation.' : `${complete.filter(Boolean).length} of 4 foundations added. Build a profile that sounds like you.`;
   $('homeProgress').value = complete.filter(Boolean).length;
   $('homeProgress').hidden = activeRole === 'hiring';
+  renderHomeQuestionnaire();
 }
 function renderMessageInbox() {
   const host = $('forwardInbox');
@@ -411,6 +416,7 @@ function initializeForwardUI() {
   setupNavigationAndPages();
   setupWelcome();
   setupBuilder();
+  setupWorkOnboarding();
   const conversation = makeElement('details', 'card profile-conversation');
   conversation.append(makeElement('summary', '', 'Prepare for a conversation about how you work'), $('applicantLiveDiscussion'));
   document.querySelector('#applicantLivePage .applicant-hub-grid').insertAdjacentElement('afterend', conversation);
