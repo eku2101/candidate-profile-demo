@@ -34,6 +34,17 @@
 .resume-import-actions { position: sticky; bottom: 0; background: #fff; padding: 14px 0 0; border-top: 1px solid var(--line); }
 .inline-example { margin-bottom: 0; }
 .inline-example > .profile-identity { margin-top: 16px; }
+.forward-help-launch { flex-shrink: 0; min-height: 38px; padding: 8px 12px; }
+#forwardHelp { width: min(560px, calc(100% - 24px)); }
+.help-log { display: grid; gap: 10px; max-height: min(38vh, 340px); overflow-y: auto; }
+.help-message { padding: 10px 14px; border-radius: 10px; background: var(--paper); overflow-wrap: anywhere; }
+.help-message-user { background: var(--pale); }
+.help-message p { margin: 4px 0 0; white-space: pre-wrap; }
+.help-topics { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0; }
+.help-topics .button { padding: 6px 10px; min-height: 34px; font-size: .76rem; }
+#forwardHelpQuestion { min-height: 62px; }
+.help-chat-actions { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+.help-chat-actions p { margin: 0; }
 .deck-toolbar label { margin: 0; }
 .deck-toolbar select { width: auto; min-width: 140px; }
 .applicant-deck { max-width: 720px; }

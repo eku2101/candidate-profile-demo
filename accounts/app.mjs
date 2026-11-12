@@ -2,6 +2,7 @@ import {accountConfig} from './config.js?v=public-signup-1';
 import {configReady,applicantFields,hiringBackgroundFields,hiringResumeFields,questions,questionLabels,normalizeApplicant,normalizeImages,applicantIssues,importReviewedFields,wordCount,discussionPrompts} from './model.mjs?v=hiring-resume-1';
 import {createAccountAPI} from './api.mjs?v=profile-images-1';
 import {validateAuthInput,submitAuthentication,authErrorMessage,newPasswordError} from './auth-flow.mjs?v=public-signup-1';
+import {installHelpChat} from './help-chat.mjs?v=help-chat-1';
 const $=id=>document.getElementById(id);
 const node=(tag,text,className)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(className)e.className=className;return e;};
 const button=(text,fn,kind='secondary')=>{const e=node('button',text,'button '+kind);e.type='button';e.addEventListener('click',()=>run(e,fn));return e;};
@@ -1032,4 +1033,5 @@ async function initialize(){
   });
   window.addEventListener('beforeunload',event=>{if(dirty){event.preventDefault();event.returnValue='';}});
 }
+installHelpChat(()=>({client,role:user?account?.role:null}));
 initialize().catch(error=>{showPage('setupNotice');status('Account access could not load. Please try again. '+error.message,true);});
