@@ -17,6 +17,18 @@
     return null;
   }
 
+  function roleFromWorkHistory(experience) {
+    const yearRange = /\b(?:19|20)\d{2}\s*(?:[-–—]|\bto\b)\s*(?:(?:[a-z]{3,9}\.?\s+)?(?:19|20)\d{2}|present|current|now)\b/i;
+    const roleWord = /\b(?:assistant|associate|analyst|coordinator|designer|developer|director|educator|engineer|founder|intern|lead|manager|researcher|specialist|supervisor|teacher|trainer|writer)\b/i;
+    for (const line of experience.split("\n")) {
+      if (/^\s*[-•●▪]/.test(line) || !yearRange.test(line)) continue;
+      const title = line.split(/\s*[|,·]\s*/)[0].trim();
+      if (title !== line && title.length <= 80 && roleWord.test(title) && !/\d{4}/.test(title)) return title;
+      break;
+    }
+    return "";
+  }
+
   function parseResumeText(text) {
     const rawText = String(text || "").replace(/\r/g, "").replace(/\u0000/g, "").trim();
     const lines = rawText.split("\n").map(line => line.trim().replace(/\t| {3,}/g, " | ").replace(/ {2}/g, " ")).filter(Boolean);
@@ -26,10 +38,12 @@
     let current = null;
     for (const line of lines) {
       if (/^(?:page\s*)?\d+\s*(?:of|\/)\s*\d+$/i.test(line)) continue;
-      const section = sectionName(line);
+      const inline = line.match(/^([^:]{2,45}):\s*(.+)$/);
+      const section = sectionName(line) || (inline && sectionName(inline[1]));
       if (section) {
         current = section;
-        if (sections[section]?.length) sections[section].push("", line);
+        if (sections[section]?.length) sections[section].push("", inline ? inline[1] : line);
+        if (inline && sections[section]) sections[section].push(inline[2]);
       } else if (!current) header.push(line);
       else if (sections[current]) sections[current].push(line);
     }
@@ -51,10 +65,12 @@
       const possibleRole = header[nameIndex + 1] || "";
       if (possibleRole.length <= 90 && possibleRole !== result.location && !/@|https?:|www\.|linkedin|\d{3}|,\s*[A-Z]{2}/i.test(possibleRole)) result.role = possibleRole;
     }
+    const suggestedRole = !result.role && roleFromWorkHistory(result.experience);
+    if (suggestedRole) result.role = suggestedRole;
     return { fields: result, rawText, warnings: [
       ...(!result.experience ? ["No work-history section was recognized. Check the extracted text and add your previous jobs."] : []),
       ...(!result.name ? ["Check the name field; a name could not be identified confidently."] : [])
-    ] };
+    ], suggestedRole:Boolean(suggestedRole) };
   }
 
   // Reconstruct lines using PDF coordinates. Recognize separate columns only

@@ -57,6 +57,14 @@ test('does not fabricate jobs or personal stories when sections are missing', ()
   assert.match(result.rawText, /without headings/);
 });
 
+test('reads an inline summary and suggests a title from a dated job entry', () => {
+  const result = resume.parseResumeText('Morgan Lee\nhello@example.test\nPROFILE: I coordinate local learning programs.\nWORK EXPERIENCE\nProgram Coordinator, Example Learning Center | May 2023 – Nov 2026\n- Supported volunteer training.');
+  assert.equal(result.fields.summary, 'I coordinate local learning programs.');
+  assert.equal(result.fields.role, 'Program Coordinator');
+  assert.equal(result.suggestedRole, true);
+  assert.match(result.fields.experience, /Example Learning Center/);
+});
+
 test('right-aligned dates stay attached to a job line', () => {
   const item = (str, x, y, width) => ({ str, transform: [1,0,0,1,x,y], width, height: 10 });
   const lines = resume.textItemsToLines([
