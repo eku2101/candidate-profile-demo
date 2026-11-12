@@ -26,16 +26,24 @@ async function setupManager(id=m) {
   await rpc(id,'forward_publish_hiring',[1]);
 }
 before(async()=>{
-  await db.exec(`create schema auth;create schema storage;
+  await db.exec(`create schema auth;create schema storage;create schema realtime;
     create role anon;create role authenticated;create role service_role bypassrls;
     grant usage on schema public,auth to anon,authenticated,service_role;
     create table auth.users(id uuid primary key,email_confirmed_at timestamptz);
     create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
-    create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);`);
+    create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
+    create table realtime.messages(payload jsonb,event text,topic text,private boolean,extension text);
+    alter table realtime.messages enable row level security;
+    grant usage on schema realtime to authenticated;
+    grant select on realtime.messages to authenticated;
+    create function realtime.topic() returns text language sql stable as $$select current_setting('realtime.topic',true)$$;
+    create function realtime.send(jsonb,text,text,boolean) returns void language sql as $$
+      insert into realtime.messages values($1,$2,$3,$4,'broadcast')
+    $$;`);
   const migrations=new URL('../../supabase/migrations/',import.meta.url);
   for(const file of (await readdir(migrations)).filter(name=>name.endsWith('.sql')).sort())await db.exec(await readFile(new URL(file,migrations),'utf8'));
 });
-beforeEach(async()=>{await db.exec('reset role;truncate auth.users cascade');for(const id of [a,b,m,n])await db.query('insert into auth.users values($1,now())',[id]);});
+beforeEach(async()=>{await db.exec('reset role;truncate auth.users cascade;truncate realtime.messages');for(const id of [a,b,m,n])await db.query('insert into auth.users values($1,now())',[id]);});
 after(()=>db.close());
 test('anonymous callers cannot read profiles, files, or register accounts',async()=>{
   await setupApplicant();
@@ -73,12 +81,18 @@ test('a share stays private, pass is hidden, and only a mutual match can chat',a
   assert.equal((await as(a,'select * from public.forward_messages')).rows.length,2);
   assert.equal((await as(m,'select * from public.forward_messages')).rows.length,2);
   assert.equal((await as(b,'select * from public.forward_messages')).rows.length,0);
+  await as(a,"select set_config('realtime.topic',$1,false)",['forward-chat:'+pending.id]);
+  const signals=actor=>as(actor,'select payload,event,private from realtime.messages');
+  assert.deepEqual((await signals(a)).rows,Array(2).fill({payload:{},event:'message-added',private:true}));
+  assert.equal((await signals(m)).rows.length,2);
+  assert.equal((await signals(b)).rows.length,0);
   assert.equal((await as(n,'select * from public.forward_connections()')).rows.length,0);
   await assert.rejects(()=>as(n,send,[pending.id,'Unrelated manager']),/row-level security/);
   await assert.rejects(()=>as(m,'insert into public.forward_messages(connection_id,sender_id,body) values($1,$2,$3)',[pending.id,a,'Spoofed sender']),/permission denied/);
   await assert.rejects(()=>as(null,'select * from public.forward_messages'),/permission denied/);
   await rpc(a,'forward_withdraw',[m]);
   assert.equal((await as(m,'select * from public.forward_messages')).rows.length,0);
+  assert.equal((await signals(m)).rows.length,0);
   assert.equal((await as(a,'select * from public.forward_connections()')).rows.length,0);
   await rpc(a,'forward_share',[m,1]);
   assert.equal((await as(m,'select * from public.forward_connections()')).rows.length,0);
