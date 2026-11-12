@@ -1,12 +1,15 @@
 import {accountConfig} from './config.js';
 import {configReady,applicantFields,questions,questionLabels,normalizeApplicant,applicantIssues,importReviewedFields,wordCount,discussionPrompts} from './model.mjs';
 import {createAccountAPI} from './api.mjs';
+import {validateAuthInput,submitAuthentication,authErrorMessage} from './auth-flow.mjs';
 const $=id=>document.getElementById(id);
 const node=(tag,text,className)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(className)e.className=className;return e;};
 const button=(text,fn,kind='secondary')=>{const e=node('button',text,'button '+kind);e.type='button';e.addEventListener('click',()=>run(e,fn));return e;};
-let client,api,user,account,draft,version=0,publication=null,files=[],shares=[],teams=[],step=0,route='profile',dirty=false,revision=0,busy=false,authMode='signin',sessionEpoch=0,recovery=false;
+let client,api,user,account,draft,version=0,publication=null,files=[],shares=[],teams=[],step=0,route='profile',dirty=false,revision=0,busy=false,authMode='signin',sessionEpoch=0,recovery=false,pendingEmail='';
 function status(message,error=false){
-  $('status').textContent=message;$('status').classList.toggle('error',error);
+  const local=!$('authPage').hidden?$('authStatus'):!$('confirmationPage').hidden?$('confirmationStatus'):null;
+  const output=local||$('status');output.textContent=message;output.classList.toggle('error',error);
+  if(local){$('status').textContent='';if(message)local.scrollIntoView({block:'nearest'});}
   if(error&&$('reviewDialog').open&&$('dialogStatus')){
     $('dialogStatus').textContent=message;$('dialogStatus').hidden=false;$('dialogStatus').scrollIntoView({block:'nearest'});
   }
@@ -16,7 +19,7 @@ async function run(control,fn){
   try{await fn();}catch(error){status(error.message||'That request could not finish. Your unsaved work is still here.',true);}
   finally{busy=false;if(control?.isConnected){control.disabled=false;control.removeAttribute('aria-busy');}}
 }
-function showPage(id){for(const name of ['setupNotice','authPage','recoveryPage','rolePage','workspace'])$(name).hidden=name!==id;}
+function showPage(id){for(const name of ['setupNotice','authPage','confirmationPage','recoveryPage','rolePage','workspace'])$(name).hidden=name!==id;}
 function changed(){dirty=true;revision++;updateSaveStatus();}
 function updateSaveStatus(){if($('draftSaveStatus'))$('draftSaveStatus').textContent=dirty?'Unsaved changes · Save before leaving this page.':version?'Saved to your account · Available on your other devices.':'New private draft · Nothing saved yet.';}
 function dialog(title,build){const host=$('dialogBody');host.replaceChildren();const heading=node('h2',title);heading.id='dialogTitle';const error=node('p',undefined,'status error');error.id='dialogStatus';error.hidden=true;error.setAttribute('role','alert');host.append(heading,error);build(host);$('reviewDialog').showModal();}
@@ -242,12 +245,35 @@ async function initialize(){
   client=createClient(accountConfig.supabaseUrl,accountConfig.publishableKey,{auth:{storage:sessionStorage,persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'implicit',storageKey:'forward-account-session'}});api=createAccountAPI(client);
   $('signInTab').addEventListener('click',()=>setAuthMode('signin'));$('signUpTab').addEventListener('click',()=>setAuthMode('signup'));
   const returnURL=new URL('accounts.html',location.href).href;
-  $('authForm').addEventListener('submit',event=>{event.preventDefault();run($('authSubmit'),async()=>{
-    const email=$('authEmail').value.trim(),password=$('authPassword').value;const result=authMode==='signup'?await client.auth.signUp({email,password,options:{emailRedirectTo:returnURL}}):await client.auth.signInWithPassword({email,password});
-    $('authPassword').value='';if(result.error)throw result.error;
-    status(authMode==='signup'?'Check your email to confirm your account, then return to sign in.':'Signed in. Loading your workspace…');
-    if(result.data.session)await handleSession(result.data.session);
-  });});
+  $('authForm').noValidate=true;
+  $('authForm').addEventListener('submit',event=>{
+    event.preventDefault();if(busy)return;
+    const mode=authMode,email=$('authEmail').value.trim(),password=$('authPassword').value;
+    for(const id of ['authEmail','authPassword'])$(id).removeAttribute('aria-invalid');
+    const issue=validateAuthInput({mode,email,password});
+    if(issue){status(issue.message,true);$(issue.field).setAttribute('aria-invalid','true');$(issue.field).focus();return;}
+    run($('authSubmit'),async()=>{
+      $('signInTab').disabled=true;$('signUpTab').disabled=true;
+      $('authSubmit').textContent=mode==='signup'?'Creating account…':'Signing in…';
+      status(mode==='signup'?'Submitting your signup. Please wait…':'Signing in. Please wait…');
+      try{
+        const result=await submitAuthentication(client.auth,{mode,email,password,returnURL});
+        $('authPassword').value='';
+        if(result.kind==='confirmation'){
+          pendingEmail=result.email;$('confirmationEmail').textContent=pendingEmail;$('confirmationStatus').textContent='';$('status').textContent='';
+          showPage('confirmationPage');$('confirmationTitle').focus();$('confirmationTitle').scrollIntoView({block:'center'});
+        }else{status('Signed in. Loading your workspace…');await handleSession(result.session);}
+      }finally{$('signInTab').disabled=false;$('signUpTab').disabled=false;setAuthMode(mode);}
+    });
+  });
+  $('confirmationResend').addEventListener('click',()=>run($('confirmationResend'),async()=>{
+    status('Requesting another confirmation email…');
+    const result=await client.auth.resend({type:'signup',email:pendingEmail,options:{emailRedirectTo:returnURL}});
+    if(result.error)throw new Error(authErrorMessage(result.error));
+    status('If confirmation is still needed, check your inbox and spam folder for a new link.');
+  }));
+  $('confirmationSignIn').addEventListener('click',()=>{showPage('authPage');setAuthMode('signin');$('authEmail').value=pendingEmail;status('After confirming your email, sign in here to open your profile.');$('authPassword').focus();});
+  $('confirmationChangeEmail').addEventListener('click',()=>{showPage('authPage');setAuthMode('signup');status('Check your email address, then submit your signup.');$('authEmail').focus();});
   $('resetPassword').addEventListener('click',()=>run($('resetPassword'),async()=>{if(!$('authEmail').reportValidity())return;const result=await client.auth.resetPasswordForEmail($('authEmail').value.trim(),{redirectTo:returnURL});if(result.error)throw result.error;status('If an account exists for that email, you’ll receive a password-reset link.');}));
   $('resendConfirmation').addEventListener('click',()=>run($('resendConfirmation'),async()=>{if(!$('authEmail').reportValidity())return;const result=await client.auth.resend({type:'signup',email:$('authEmail').value.trim(),options:{emailRedirectTo:returnURL}});if(result.error)throw result.error;status('If confirmation is still needed, check your email for a new link.');}));
   $('recoveryForm').addEventListener('submit',event=>{event.preventDefault();run(event.submitter,async()=>{if($('newPassword').value!==$('confirmPassword').value)throw new Error('The passwords do not match.');const result=await client.auth.updateUser({password:$('newPassword').value});if(result.error)throw result.error;$('recoveryForm').reset();recovery=false;await handleSession((await client.auth.getSession()).data.session);status('Your password has been updated.');});});
