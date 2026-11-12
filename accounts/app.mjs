@@ -217,7 +217,7 @@ function renderEditor(){
   saveStatus.append(button('Reload saved version',()=>{
     dialog('Reload your saved profile?',body=>{body.append(node('p','This replaces any unsaved edits in this tab with the version saved to your account.'),button('Reload saved version',async()=>{await loadOwned();closeDialog();renderEditor();status('Your saved profile has been loaded.');}));});
   }));
-  saveStatus.append(button('See an example profile',showExampleProfile));
+  saveStatus.append(button('See example profiles',()=>showExampleProfiles(account.role)));
   host.append(saveStatus);
   const panel=node('section',undefined,'panel');
   const labels=account.role==='applicant'?['Work preferences','About you','Your top three','Values & teamwork','Review & share']:['Team questionnaire','Manager & role','Review & publish'];
@@ -257,17 +257,8 @@ function renderEditor(){
   const actions=node('div',undefined,'actions');if(step>0)actions.append(button('← Back',()=>{step--;renderEditor();}));if(step<labels.length-1)actions.append(button('Continue →',()=>{if(step===0){const answers=account.role==='applicant'?draft.preferences:draft.answers;const missing=Object.keys(answers).find(k=>!answers[k]);if(missing){$('answer-'+missing).focus();throw new Error('Choose an answer to each question. Different preferences are welcome.');}}step++;renderEditor();},'primary'));panel.append(actions);host.append(panel);
   const strip=node('div',undefined,'save-strip');strip.append(node('p','Drafts are private until you choose to share.','help'));const controls=node('div',undefined,'actions');controls.append(button('Save private draft',saveDraft,'primary'));strip.append(controls);host.append(strip);updateSaveStatus();
 }
-function showExampleProfile(){
-  if(account.role==='hiring'){
-    dialog('Example hiring manager profile',body=>{
-      body.append(node('p','Fictional example. Describe what the role involves, how the team works, and how you help people succeed.','notice'));
-      renderTeamStory(body,{...ForwardTeams.samples[2],demoImages:{portrait:'demo-manager-portrait.jpg',showcase:'demo-manager-team.jpg',alt:'A learning design team plans a lesson together around a table.'}});
-    });
-    return;
-  }
-  dialog('Example applicant profile',body=>{
-    body.append(node('p','Fictional example. Start with the work you do, then show what changed because of your contribution.','notice'));
-    renderApplicantStory(body,{
+const exampleApplicants=[
+  {
       name:'Casey Park',
       role:'Learning Experience Designer',
       location:'New York, NY',
@@ -280,7 +271,74 @@ function showExampleProfile(){
       ],
       experience:'Learning Designer · Harbor Learning Lab (2024–present)\nProgram Assistant · Northside Community Workshop (2022–2024)',
       values:'I share drafts early, ask whose perspective is missing, and document decisions so colleagues can build on the work.'
-    });
+  },
+  {
+    name:'Amara Brooks',
+    role:'Community Programs Coordinator',
+    location:'Philadelphia, PA',
+    summary:'I plan community programs and help volunteers feel prepared. I use feedback from participants and partner organizations to make events easier to attend and run.',
+    skills:'Volunteer coordination, event logistics, community outreach, program evaluation',
+    featuredRoles:[
+      {title:'Program Coordinator · Linden Neighborhood Workshop',dates:'2024–present',summary:'Worked with local partners to move registration to a simpler form and add a phone option. We filled all 40 workshop places and reached 12 first-time participants.'},
+      {title:'Volunteer Lead · Cedar Street Garden',dates:'2022–2024',summary:'Created a short orientation and paired new volunteers with experienced ones. More people felt ready to lead their own shifts.'}
+    ],
+    experience:'Program Coordinator · Linden Neighborhood Workshop (2024–present)\nVolunteer Lead · Cedar Street Garden (2022–2024)',
+    support:'I share schedules early, explain who owns each task, and make time for a quick debrief after events.'
+  },
+  {
+    name:'Mateo Ellis',
+    role:'Customer Operations Specialist',
+    location:'Denver, CO',
+    summary:'I help service teams spot recurring problems and improve how they handle them. I’m comfortable turning feedback into a clear process that teammates can use.',
+    skills:'Customer support, process documentation, spreadsheet reporting, peer training',
+    featuredRoles:[
+      {title:'Support Associate · Summit Loop Equipment',dates:'2023–present',summary:'Reviewed a month of support tickets and found that unclear return instructions caused repeat questions. I rewrote the guide and helped the team reduce follow-up requests by 20% over the next month.'},
+      {title:'Shift Lead · Orchard Corner Market',dates:'2021–2023',summary:'Tested a short closing checklist with teammates. It gave the opening crew a consistent handoff and reduced missed restocking tasks.'}
+    ],
+    experience:'Support Associate · Summit Loop Equipment (2023–present)\nShift Lead · Orchard Corner Market (2021–2023)',
+    values:'I describe problems without blaming people and ask the team to test changes before making them permanent.'
+  }
+];
+
+function showExampleProfiles(initialRole){
+  dialog('Example profiles',body=>{
+    body.append(node('p','Every profile here is labeled FAKE. Use the examples to see what to write in your own profile.','notice'));
+    const controls=node('div',undefined,'example-controls');
+    const label=node('label','Choose an example');
+    const select=node('select');
+    label.htmlFor=select.id='example-profile-select';
+    const preview=node('section',undefined,'example-preview');
+    preview.setAttribute('aria-label','Selected example profile');
+    let role=initialRole;
+    const applicants=button('Applicant examples',()=>switchRole('applicant'));
+    const managers=button('Hiring manager examples',()=>switchRole('hiring'));
+    controls.append(applicants,managers);
+    body.append(controls,label,select,preview);
+    const options=()=>role==='applicant'?exampleApplicants:[ForwardTeams.samples[2],...ForwardTeams.samples.slice(0,2)];
+
+    function draw(){
+      const profile=options()[Number(select.value)];
+      preview.replaceChildren(node('strong','FAKE','fake-label'));
+      if(role==='applicant')renderApplicantStory(preview,profile);
+      else{
+        const demoImages=profile===ForwardTeams.samples[2]
+          ? {portrait:'demo-manager-portrait.jpg',showcase:'demo-manager-team.jpg',alt:'A learning design team plans a lesson together around a table.'}
+          : undefined;
+        renderTeamStory(preview,{...profile,demoImages});
+      }
+    }
+
+    function switchRole(next){
+      role=next;
+      applicants.setAttribute('aria-pressed',String(role==='applicant'));
+      managers.setAttribute('aria-pressed',String(role==='hiring'));
+      select.replaceChildren(...options().map((profile,index)=>new Option(
+        'FAKE · '+(profile.name||profile.managerName)+' · '+(profile.role||profile.managerTitle),String(index)
+      )));
+      draw();
+    }
+    select.addEventListener('change',draw);
+    switchRole(role);
   });
 }
 
@@ -497,6 +555,7 @@ function renderTeamStory(host,profile){
 async function renderDiscovery(){
   heading('DISCOVER TEAMS','Choose your next team, too.','Meet the hiring manager and explore how the team works. Managers can see when someone opens their full profile.');
   const host=$('workspaceContent');host.replaceChildren(node('p','Loading teams…'));teams=await api.teams();shares=await api.shares();host.replaceChildren();
+  host.append(button('See hiring manager examples',()=>showExampleProfiles('hiring')));
   host.append(node('p','Manager and company descriptions are supplied by account holders. Forward has not independently verified their employment or vacancies. Review the person and organization before sharing your résumé.','notice'));
   const label=node('label','Search roles, managers, companies, or locations');label.htmlFor='teamSearch';const search=node('input');search.id='teamSearch';search.type='search';host.append(label,search);const count=node('p',undefined,'help');count.setAttribute('role','status');host.append(count);const cards=node('div',undefined,'cards');host.append(cards);
   const draw=()=>{cards.replaceChildren();const list=teams.filter(t=>[t.profile.managerName,t.profile.company,t.profile.roleTitle,t.profile.location].join(' ').toLowerCase().includes(search.value.trim().toLowerCase()));count.textContent=`${list.length}${teams.length===100?' of the 100 most recently updated':''} teams to explore`;for(const team of list){const card=node('article',undefined,'panel');card.append(node('p',team.profile.company,'eyebrow'),node('h2',team.profile.roleTitle),node('p',team.profile.managerName+' · '+team.profile.location,'card-meta'),node('p',team.profile.roleSummary),button('Meet the manager →',()=>showTeam(team),'primary'));cards.append(card);}if(!list.length)cards.append(node('p','No published teams match yet. Try another search or come back after a manager publishes a profile.','empty'));};search.addEventListener('input',draw);draw();
@@ -578,7 +637,7 @@ async function renderApplicantDeck(){
   const label=node('label','Show applicants');
   label.htmlFor=filter.id;
   const toolbar=node('div',undefined,'deck-toolbar');
-  toolbar.append(label,filter,button('Refresh applicants',renderApplicantDeck));
+  toolbar.append(label,filter,button('Refresh applicants',renderApplicantDeck),button('See applicant examples',()=>showExampleProfiles('applicant')));
   const content=node('div',undefined,'applicant-deck');
   host.replaceChildren(toolbar,content);
   let index=0;
