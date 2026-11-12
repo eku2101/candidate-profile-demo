@@ -1,11 +1,12 @@
 import {accountConfig} from './config.js?v=public-signup-1';
 import {configReady,applicantFields,questions,questionLabels,normalizeApplicant,applicantIssues,importReviewedFields,wordCount,discussionPrompts} from './model.mjs';
-import {createAccountAPI} from './api.mjs';
+import {createAccountAPI} from './api.mjs?v=hiring-matches-1';
 import {validateAuthInput,submitAuthentication,authErrorMessage,newPasswordError} from './auth-flow.mjs?v=public-signup-1';
 const $=id=>document.getElementById(id);
 const node=(tag,text,className)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(className)e.className=className;return e;};
 const button=(text,fn,kind='secondary')=>{const e=node('button',text,'button '+kind);e.type='button';e.addEventListener('click',()=>run(e,fn));return e;};
 let client,api,user,account,draft,version=0,publication=null,files=[],shares=[],teams=[],step=0,route='profile',dirty=false,revision=0,busy=false,authMode='signin',sessionEpoch=0,recovery=false,pendingEmail='';
+let stopChat=()=>{};
 function status(message,error=false){
   const local=!$('authPage').hidden?$('authStatus'):!$('confirmationPage').hidden?$('confirmationStatus'):null;
   const output=local||$('status');output.textContent=message;output.classList.toggle('error',error);
@@ -63,9 +64,20 @@ async function saveDraft(){
   const savingRevision=revision;const saved=await api.save(structuredClone(draft),version);version=saved.version;
   if(revision===savingRevision)dirty=false;updateSaveStatus();status(dirty?'Saved the previous edits. You have newer unsaved changes.':'Your private draft is saved to your account.');return saved;
 }
-async function navigate(next){route=next;renderNav();if(next==='profile')renderEditor();else if(next==='discover')await renderDiscovery();else await renderSharing();$('workspaceTitle').focus();window.scrollTo(0,0);}
+async function navigate(next,connectionId){
+  stopChat();
+  route=next;
+  renderNav();
+  if(next==='profile')renderEditor();
+  else if(next==='discover')await renderDiscovery();
+  else if(next==='messages')await renderMessages(connectionId);
+  else await renderSharing();
+  $('workspaceTitle').focus();
+  window.scrollTo(0,0);
+}
 function renderNav(){
   const items=account.role==='applicant'?[['profile','My profile'],['discover','Discover teams'],['sharing','Sharing']]:[['profile','My hiring profile'],['sharing','Applicants']];
+  items.push(['messages','Messages']);
   $('accountNav').replaceChildren(...items.map(([id,label])=>{const b=button(label,()=>navigate(id));if(route===id)b.setAttribute('aria-current','page');return b;}));$('accountNav').hidden=false;
 }
 function renderEditor(){
@@ -105,7 +117,15 @@ function renderPublishing(panel){
   const applicant=account.role==='applicant';
   panel.append(node('p',publication?`A shared version exists. ${dirty||publication.version!==version?'Your latest draft edits are not shared yet.':'Your saved draft and shared version match.'}`:'No profile is shared yet.','notice'));
   if(applicant)renderApplicantStory(panel,publicApplicant(draft));else renderTeamStory(panel,{...draft.fields,answers:draft.answers});
-  if(applicant)panel.append(node('p',currentFile()?'Résumé to include: '+currentFile().name:'No résumé will be included. You can still share your profile.','help'));
+  if(applicant){
+    panel.append(node('p',currentFile()?'Résumé to include: '+currentFile().name:'No résumé will be included. You can still share your profile.','help'));
+    panel.append(button('Preview as a hiring manager',()=>dialog('Hiring manager preview',body=>{
+      renderApplicantStory(body,publicApplicant(draft));
+      const file=currentFile();
+      if(file)body.append(button('Download résumé · '+file.name,()=>downloadFile(file)));
+      else body.append(node('p','No résumé attached.'));
+    })));
+  }
   panel.append(button(applicant?'Review sharing version →':'Review publication →',()=>{
     const issues=applicant?applicantIssues(draft,true):ForwardTeams.issues(draft.fields,draft.answers);
     if(issues.length)throw new Error(issues[0].message);
@@ -120,7 +140,7 @@ function renderPublishing(panel){
     });
   },'primary'));
   if(publication)panel.append(button(applicant?'Unshare from everyone':'Unpublish hiring profile',()=>{
-    dialog(applicant?'Withdraw all sharing?':'Unpublish your hiring profile?',body=>{body.append(node('p',applicant?'Managers will lose future access to your profile and résumé. This cannot retrieve files they already downloaded. Your private draft stays saved.':'Your manager profile will disappear from Discover teams. Your draft stays saved. Existing applicants who shared with you remain in your applicant list.'),button('Confirm withdrawal',async()=>{await api.unpublish();publication=null;shares=await api.shares();closeDialog();renderEditor();status('Sharing withdrawn. Your private draft is saved.');},'danger'));});
+    dialog(applicant?'Withdraw all sharing?':'Unpublish your hiring profile?',body=>{body.append(node('p',applicant?'Managers will lose access to your profile and résumé. Your chats with them will be removed for both people. Copies already downloaded cannot be retrieved.':'Your manager profile will disappear from Discover teams. Your draft stays saved. Existing applicants who shared with you remain in your applicant list.'),button('Confirm withdrawal',async()=>{await api.unpublish();publication=null;shares=await api.shares();closeDialog();renderEditor();status('Sharing withdrawn. Your private draft is saved.');},'danger'));});
   },'danger'));
 }
 async function reviewResume(file){
@@ -188,20 +208,146 @@ function showTeam(team){
         confirmation.append(node('p',`You are sharing your saved profile and its attached résumé with ${team.profile.managerName} at ${team.profile.company}. They can view and download the résumé from their own device. Your résumé may include contact information. You can withdraw future access, but cannot retrieve copies already downloaded.`));
         renderApplicantStory(confirmation,publication.profile);
         const attachment=files.find(f=>f.id===publication.resume_id);confirmation.append(node('p',attachment?'Résumé included: '+attachment.name:'No résumé attached to this sharing version.','notice'));
-        confirmation.append(button('Share with this manager',async()=>{await api.share(team.owner_id,publication.version);shares=await api.shares();closeDialog();status('Your profile is now shared with '+team.profile.managerName+'.');},'primary'));
+        confirmation.append(button('Share with this manager',async()=>{
+          await api.share(team.owner_id,publication.version);
+          closeDialog();
+          await navigate('sharing');
+          status('Profile shared with '+team.profile.managerName+'. Choose “I’m open to chat” when you’re ready to connect.');
+        },'primary'));
       });
     },'primary'));
   });
 }
 async function renderSharing(){
-  const applicant=account.role==='applicant';heading(applicant?'YOU CONTROL ACCESS':'APPLICANTS SHARED WITH YOU',applicant?'Your story. Your choice.':'Meet the people behind the résumé.',applicant?'Only the managers listed here can access your shared profile and résumé.':'These applicants chose to share their profiles and résumés with your account.');
-  const host=$('workspaceContent');host.replaceChildren(node('p','Loading…'));
-  if(applicant){[shares,teams]=await Promise.all([api.shares(),api.teams()]);host.replaceChildren();if(!shares.length)host.append(node('p','No managers have access yet. Explore Discover teams when you’re ready.','empty'));
-    for(const grant of shares){const team=teams.find(t=>t.owner_id===grant.manager_id);const row=node('section',undefined,'panel sharing-row');const copy=node('div');copy.append(node('strong',team?.profile.managerName||'Manager with an unpublished profile'),node('p',team?.profile.company||'Account: '+grant.manager_id));row.append(copy,button('Withdraw access',()=>dialog('Withdraw this manager’s access?',body=>{body.append(node('p','Future profile views and résumé downloads will be blocked. Copies already downloaded cannot be retrieved.'),button('Withdraw access',async()=>{await api.withdraw(grant.manager_id);closeDialog();await renderSharing();status('Access withdrawn.');},'danger'));}),'danger'));host.append(row);}
-  }else{
-    const applicants=await api.applicants();host.replaceChildren();if(!applicants.length)host.append(node('p','No applicants have shared with you yet. Publish your hiring profile so applicants can meet you and choose to connect.','empty'));
-    const cards=node('div',undefined,'cards');for(const person of applicants){const card=node('article',undefined,'panel');card.append(node('h2',person.profile.name),node('p',person.profile.role,'card-meta'),node('p',person.profile.summary),button('Read their full story →',()=>showSharedApplicant(person.owner_id),'primary'));cards.append(card);}host.append(cards);
+  if(account.role==='hiring')return renderApplicantDeck();
+  heading('YOU CONTROL ACCESS','Your story. Your choice.','Choose which managers can see your profile and résumé and when you’re open to chatting.');
+  const host=$('workspaceContent');
+  host.replaceChildren(node('p','Loading…'));
+  const [grants,connections]=await Promise.all([api.shares(),api.connections()]);
+  shares=grants;
+  const sharedTeams=await Promise.all(grants.map(grant=>api.publication('hiring',grant.manager_id)));
+  host.replaceChildren(button('Refresh sharing',renderSharing));
+  if(!grants.length)host.append(node('p','No managers have access yet. Explore Discover teams when you’re ready.','empty'));
+  grants.forEach((grant,index)=>{
+    const team=sharedTeams[index];
+    const connection=connections.find(item=>item.manager_id===grant.manager_id);
+    const row=node('section',undefined,'panel sharing-row');
+    const copy=node('div');
+    copy.append(node('strong',team?.profile.managerName||'Manager with an unpublished profile'),node('p',team?.profile.company||''));
+    if(connection?.matched)copy.append(node('p','Matched','card-meta'));
+    else if(connection?.applicant_ready)copy.append(node('p','Open to chat','card-meta'));
+    const controls=node('div',undefined,'actions');
+    if(connection?.matched)controls.append(button('Open chat',()=>navigate('messages',connection.id),'primary'));
+    else if(!connection?.applicant_ready)controls.append(button('I’m open to chat',async()=>{
+      const matched=await api.chooseConnection(grant.manager_id,'open-chat');
+      await renderSharing();
+      status(matched?'You matched. Open chat to say hello.':'You’re open to chatting. A chat opens when the manager is interested too.');
+    },'primary'));
+    controls.append(button('Withdraw access',()=>dialog('Withdraw this manager’s access?',body=>{
+      body.append(node('p','This removes their access to your profile and résumé and deletes your chat for both people. Copies already downloaded cannot be retrieved.'));
+      body.append(button('Withdraw access',async()=>{
+        await api.withdraw(grant.manager_id);
+        closeDialog();
+        await renderSharing();
+        status('Access withdrawn.');
+      },'danger'));
+    }),'danger'));
+    row.append(copy,controls);
+    host.append(row);
+  });
+}
+
+async function renderApplicantDeck(){
+  heading('APPLICANTS SHARED WITH YOU','Meet the people behind the résumé.','Preview the applicants who shared with you. Swipe right for Interested or left to Pass. You can revisit passed profiles any time.');
+  const host=$('workspaceContent');
+  host.replaceChildren(node('p','Loading applicants…'));
+  const [applicants,existing]=await Promise.all([api.applicants(),api.connections()]);
+  const decisions=new Map(existing.map(item=>[item.applicant_id,item]));
+  const filter=node('select');
+  filter.id='applicantFilter';
+  for(const [value,label] of [['new','To review'],['interested','Interested'],['pass','Passed'],['matched','Matched']]){
+    filter.append(new Option(label,value));
   }
+  const label=node('label','Show applicants');
+  label.htmlFor=filter.id;
+  const toolbar=node('div',undefined,'deck-toolbar');
+  toolbar.append(label,filter,button('Refresh applicants',renderApplicantDeck));
+  const content=node('div',undefined,'applicant-deck');
+  host.replaceChildren(toolbar,content);
+  let index=0;
+
+  function draw(focus=false){
+    const list=applicants.filter(person=>{
+      const decision=decisions.get(person.owner_id);
+      return (decision?.matched?'matched':decision?.manager_choice||'new')===filter.value;
+    });
+    index=Math.min(index,Math.max(0,list.length-1));
+    const person=list[index];
+    if(!person){
+      const empty=node('p',applicants.length?'No applicants in this view.':'No applicants have shared with you yet. Publish your hiring profile so applicants can meet you and choose to share.','empty');
+      empty.tabIndex=-1;
+      content.replaceChildren(empty);
+      if(focus)empty.focus();
+      return;
+    }
+    const decision=decisions.get(person.owner_id);
+    const card=node('article',undefined,'panel applicant-card');
+    const story=node('div',undefined,'swipe-area');
+    const title=node('h2',person.profile.name);
+    title.tabIndex=-1;
+    const initials=person.profile.name.trim().split(/\s+/).slice(0,2).map(word=>Array.from(word)[0]).join('').toUpperCase();
+    const avatar=node('span',initials,'applicant-initials');
+    avatar.setAttribute('aria-hidden','true');
+    story.append(avatar,title,node('p',[person.profile.role,person.profile.location].filter(Boolean).join(' · '),'card-meta'),node('p',person.profile.summary,'profile-lead profile-text'));
+    const highlights=(person.profile.featuredRoles||[]).filter(role=>role.title).map(role=>role.title);
+    if(highlights.length)story.append(node('p',highlights.join(' · '),'help'));
+    card.append(story);
+    const actions=node('div',undefined,'actions');
+    actions.append(button('Preview full profile',()=>showSharedApplicant(person.owner_id)));
+    const choose=async choice=>{
+      const matched=await api.chooseConnection(person.owner_id,choice);
+      if(matched){
+        await navigate('messages',person.owner_id);
+        status('You matched with '+person.profile.name+'. Your private chat is ready.');
+        return;
+      }
+      decisions.set(person.owner_id,{manager_choice:choice});
+      draw(true);
+      status(choice==='pass'?'Moved to Passed. You can revisit this profile any time.':'Interest saved. A chat opens when the applicant is open to chatting too.');
+    };
+    if(decision?.matched){
+      actions.append(button('Open chat',()=>navigate('messages',decision.id),'primary'));
+    }else{
+      const pass=decision?.manager_choice==='pass'?null:button('← Pass',()=>choose('pass'));
+      const interested=decision?.manager_choice==='interested'?null:button('Interested →',()=>choose('interested'),'primary');
+      if(pass)actions.append(pass);
+      if(interested)actions.append(interested);
+      let start;
+      story.addEventListener('pointerdown',event=>{
+        if(!event.isPrimary||event.button!==0)return;
+        start={id:event.pointerId,x:event.clientX,y:event.clientY};
+        story.setPointerCapture(event.pointerId);
+      });
+      story.addEventListener('pointercancel',()=>{start=null;});
+      story.addEventListener('pointerup',event=>{
+        if(!start||start.id!==event.pointerId)return;
+        const dx=event.clientX-start.x,dy=event.clientY-start.y;
+        start=null;
+        if(Math.abs(dx)<65||Math.abs(dx)<Math.abs(dy)*1.5)return;
+        (dx>0?interested:pass)?.click();
+      });
+    }
+    card.append(actions);
+    const paging=node('div',undefined,'deck-paging');
+    if(index>0)paging.append(button('← Previous',()=>{index--;draw(true);}));
+    paging.append(node('p',`${index+1} of ${list.length}`,'help'));
+    if(index<list.length-1)paging.append(button('Next →',()=>{index++;draw(true);}));
+    content.replaceChildren(card,paging);
+    if(focus)title.focus();
+  }
+
+  filter.addEventListener('change',()=>{index=0;draw();});
+  draw();
 }
 async function showSharedApplicant(id){
   const person=await api.publication('applicant',id);
@@ -214,6 +360,137 @@ async function showSharedApplicant(id){
     if(prompts?.length){const list=node('ul');for(const prompt of prompts)list.append(node('li',prompt.question));body.append(list);}else body.append(node('p','What helps each of us do our best work, and what should we agree on before starting?'));
   });
 }
+
+async function renderMessages(selection){
+  heading('MESSAGES','Your conversations.','Chat privately with applicants or hiring managers after you both choose to connect.');
+  const host=$('workspaceContent');
+  host.replaceChildren(node('p','Loading conversations…'));
+  const matches=(await api.connections()).filter(connection=>connection.matched);
+  const peerRole=account.role==='applicant'?'hiring':'applicant';
+  const peerId=connection=>peerRole==='hiring'?connection.manager_id:connection.applicant_id;
+  const profiles=await Promise.all(matches.map(connection=>api.publication(peerRole,peerId(connection))));
+  const chats=matches.map((connection,index)=>({
+    ...connection,
+    name:peerRole==='hiring'?(profiles[index]?.profile.managerName||'Hiring manager'):(profiles[index]?.profile.name||'Applicant')
+  })).sort((a,b)=>a.name.localeCompare(b.name));
+  host.replaceChildren(button('Refresh conversations',()=>navigate('messages',selection)));
+  if(!chats.length){
+    host.append(node('p','No matches yet. When both people choose to connect, your conversation appears here.','empty'));
+    return;
+  }
+  const active=chats.find(chat=>chat.id===selection||peerId(chat)===selection);
+  const layout=node('div',undefined,'messages-layout');
+  const inbox=node('nav',undefined,'panel chat-list');
+  inbox.setAttribute('aria-label','Matched conversations');
+  for(const chat of chats){
+    const link=button(chat.name,()=>navigate('messages',chat.id));
+    if(chat===active)link.setAttribute('aria-current','page');
+    inbox.append(link);
+  }
+  layout.append(inbox);
+  host.append(layout);
+  if(active)await openConversation(layout,active);
+  else layout.append(node('p','Choose a conversation to read or send a message.','empty'));
+}
+
+async function openConversation(host,chat){
+  const panel=node('section',undefined,'panel chat-panel');
+  const list=node('ol',undefined,'chat-history');
+  list.setAttribute('aria-label','Messages with '+chat.name);
+  list.tabIndex=0;
+  const empty=node('p','Say hello to start the conversation.','help');
+  const info=node('p',undefined,'help');
+  info.setAttribute('role','status');
+  const form=node('form');
+  const label=node('label','Message');
+  label.htmlFor='chatMessage';
+  const input=node('textarea');
+  input.id=label.htmlFor;
+  input.required=true;
+  input.maxLength=2000;
+  input.rows=3;
+  const send=node('button','Send message','button primary');
+  send.type='submit';
+  form.append(label,input,send);
+  const rendered=new Map();
+  let active=true;
+  let refreshing=false;
+  let firstPage=true;
+  let timer;
+  const older=button('Load earlier messages',async()=>{
+    const previousTop=list.scrollTop;
+    const previousHeight=list.scrollHeight;
+    const rows=await api.messages(chat.id,Math.min(...rendered.keys()));
+    if(!active)return;
+    older.hidden=rows.length<50;
+    draw(rows);
+    list.scrollTop=previousTop+list.scrollHeight-previousHeight;
+  });
+  older.hidden=true;
+  panel.append(node('h2',chat.name),older,empty,list,info,form);
+  host.append(panel);
+
+  function draw(rows,scrollToLatest=false){
+    if(!rows.some(message=>!rendered.has(message.id)))return;
+    for(const message of rows)rendered.set(message.id,message);
+    const items=[...rendered.values()].sort((a,b)=>a.id-b.id).map(message=>{
+      const mine=message.sender_id===user.id;
+      const item=node('li',undefined,mine?'chat-message mine':'chat-message');
+      const meta=node('p',mine?'You':chat.name,'help');
+      const time=node('time',new Date(message.created_at).toLocaleString());
+      time.dateTime=message.created_at;
+      meta.append(' · ',time);
+      item.append(meta,node('p',message.body,'profile-text'));
+      return item;
+    });
+    list.replaceChildren(...items);
+    empty.hidden=Boolean(items.length);
+    if(scrollToLatest)list.scrollTop=list.scrollHeight;
+  }
+
+  async function refresh(){
+    if(!active||refreshing||document.hidden)return;
+    refreshing=true;
+    try{
+      const [connections,rows]=await Promise.all([api.connections(),api.messages(chat.id)]);
+      if(!active)return;
+      if(!connections.some(connection=>connection.id===chat.id&&connection.matched)){
+        stopChat();
+        panel.replaceChildren(node('p','This conversation is closed.','empty'));
+        return;
+      }
+      const nearEnd=list.scrollHeight-list.clientHeight-list.scrollTop<50;
+      if(firstPage){older.hidden=rows.length<50;firstPage=false;}
+      draw(rows,nearEnd);
+      info.textContent='';
+    }catch{
+      if(active)info.textContent='Could not refresh messages. Forward will try again.';
+    }finally{refreshing=false;}
+  }
+
+  form.addEventListener('submit',event=>{
+    event.preventDefault();
+    run(send,async()=>{
+      const body=input.value.trim();
+      if(!body){input.focus();throw new Error('Write a message before sending.');}
+      const sent=await api.sendMessage(chat.id,body);
+      if(!active)return;
+      if(input.value.trim()===body)input.value='';
+      draw([sent],true);
+      input.focus();
+      status('');
+    });
+  });
+  stopChat=()=>{
+    active=false;
+    clearInterval(timer);
+    document.removeEventListener('visibilitychange',refresh);
+  };
+  timer=setInterval(refresh,5000);
+  document.addEventListener('visibilitychange',refresh);
+  await refresh();
+}
+
 function setAuthMode(mode){
   if(mode!==authMode){
     $('authStatus').textContent='';
@@ -230,6 +507,7 @@ function setAuthMode(mode){
   $('passwordHelp').textContent=mode==='signup'?'Use at least 12 characters. We’ll email you a confirmation link.':'Your session stays in this tab. Sign out when using a shared computer.';
 }
 async function handleSession(session,event){
+  stopChat();
   const epoch=++sessionEpoch;
   if(user&&session?.user?.id!==user.id){location.replace('accounts.html');return;}
   user=session?.user||null;
