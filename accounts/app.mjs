@@ -321,7 +321,7 @@ function showExampleProfiles(initialRole){
         const demoImages=profile===ForwardTeams.samples[2]
           ? {portrait:'demo-manager-portrait.jpg',showcase:'demo-manager-team.jpg',alt:'A learning design team plans a lesson together around a table.'}
           : undefined;
-        renderTeamStory(preview,{...profile,demoImages});
+        renderExampleTeam(preview,{...profile,demoImages});
       }
     }
 
@@ -671,13 +671,82 @@ function renderTeamStory(host,profile){
   appendShowcase(host,profile,'Team image');
   const answers=node('div',undefined,'team-answers');for(const key of Object.keys(questions)){const section=node('section',undefined,'team-answer');section.append(node('h3',questionLabels[key]),node('p',questions[key][profile.answers?.[key]]||'Not answered yet'));answers.append(section);}host.append(answers);
 }
+function renderExampleTeam(host,profile){
+  renderTeamStory(host,profile);
+  if(profile.conversationStarter){
+    const prompt=node('section',undefined,'notice');
+    prompt.append(node('h3','A question you could ask'),node('p',profile.conversationStarter));
+    host.append(prompt);
+  }
+}
+
+function discoveryCard(profile,open,isExample=false){
+  const card=node('article',undefined,'panel');
+  if(isExample)card.append(node('strong','FICTIONAL EXAMPLE','fake-label'));
+  card.append(node('p',profile.company,'eyebrow'),node('h3',profile.roleTitle),
+    node('p',[profile.managerName,profile.location].filter(Boolean).join(' · '),'card-meta'),
+    node('p',isExample?profile.discoveryPreview:profile.roleSummary),
+    button(isExample?'Explore example team →':'Meet the manager →',open,isExample?'secondary':'primary'));
+  return card;
+}
+
 async function renderDiscovery(){
-  heading('DISCOVER TEAMS','Choose your next team, too.','Meet the hiring manager and explore how the team works. Managers can see when someone opens their full profile.');
-  const host=$('workspaceContent');host.replaceChildren(node('p','Loading teams…'));teams=await api.teams();shares=await api.shares();host.replaceChildren();
-  host.append(button('See hiring manager examples',()=>showExampleProfiles('hiring')));
-  host.append(node('p','Employers in Discover teams have been reviewed by Forward and must confirm their openings every 30 days. You decide who can access your résumé.','notice'));
-  const label=node('label','Search roles, managers, companies, or locations');label.htmlFor='teamSearch';const search=node('input');search.id='teamSearch';search.type='search';host.append(label,search);const count=node('p',undefined,'help');count.setAttribute('role','status');host.append(count);const cards=node('div',undefined,'cards');host.append(cards);
-  const draw=()=>{cards.replaceChildren();const list=teams.filter(t=>[t.profile.managerName,t.profile.company,t.profile.roleTitle,t.profile.location].join(' ').toLowerCase().includes(search.value.trim().toLowerCase()));count.textContent=`${list.length}${teams.length===100?' of the 100 most recently updated':''} teams to explore`;for(const team of list){const card=node('article',undefined,'panel');card.append(node('p',team.profile.company,'eyebrow'),node('h2',team.profile.roleTitle),node('p',team.profile.managerName+' · '+team.profile.location,'card-meta'),node('p',team.profile.roleSummary),button('Meet the manager →',()=>showTeam(team),'primary'));cards.append(card);}if(!list.length)cards.append(node('p','No published teams match yet. Try another search or come back after a manager publishes a profile.','empty'));};search.addEventListener('input',draw);draw();
+  heading('DISCOVER TEAMS','Your story. Your choice.','Explore how teams work and decide who you’d like to meet.');
+  const host=$('workspaceContent');
+  host.replaceChildren(node('p','Loading teams…'));
+  [teams,shares]=await Promise.all([api.teams(),api.shares()]);
+
+  const label=node('label','Search roles, managers, companies, or locations');
+  const search=node('input');
+  search.id=label.htmlFor='teamSearch';
+  search.type='search';
+  const live=node('section',undefined,'team-discovery-section');
+  const count=node('p',undefined,'help');
+  count.setAttribute('role','status');
+  const results=node('div');
+  live.append(node('h2','Live openings'),
+    node('p','Forward reviews employers before they post. A manager can see when someone opens their live profile. You choose who gets access to your résumé.','help'),
+    count,results);
+
+  const examples=node('section',undefined,'team-discovery-section');
+  const exampleCards=node('div',undefined,'cards');
+  examples.append(node('h2','Explore sample teams'),
+    node('p','These fictional teams show what you can learn about a manager, a role, and how colleagues work together.'),
+    exampleCards);
+  for(const profile of ForwardTeams.samples){
+    exampleCards.append(discoveryCard(profile,()=>dialog('Example team',body=>{
+      body.append(node('strong','FICTIONAL EXAMPLE','fake-label'),
+        node('p','Explore this practice listing. Your profile and résumé stay private.','help'));
+      renderExampleTeam(body,profile);
+    }),true));
+  }
+
+  const profileActions=node('section',undefined,'panel discovery-profile-actions');
+  const actions=node('div',undefined,'actions');
+  actions.append(button('Build my profile',()=>navigate('profile'),'primary'),
+    button('See applicant examples',()=>showExampleProfiles('applicant')),
+    button('Manage sharing',()=>navigate('sharing')));
+  profileActions.append(node('h2','Tell your story'),node('p','See how fictional applicants describe their work, impact, and community. Build your own profile and choose which managers can see it.'),actions);
+  host.replaceChildren(label,search,live,examples,profileActions);
+
+  function draw(){
+    const query=search.value.trim();
+    const matches=new Set(ForwardTeams.search(teams.map(team=>team.profile),query));
+    const matchingTeams=teams.filter(team=>matches.has(team.profile));
+    count.textContent=`${matchingTeams.length} live opening${matchingTeams.length===1?'':'s'}${teams.length===100?' among the 100 most recently updated':''}`;
+    if(matchingTeams.length){
+      const cards=node('div',undefined,'cards');
+      for(const team of matchingTeams)cards.append(discoveryCard(team.profile,()=>showTeam(team)));
+      results.replaceChildren(cards);
+      return;
+    }
+    const empty=node('div',undefined,'empty');
+    empty.append(node('p',query?'No live openings match this search. Explore the sample teams below or try a different search.':'No live openings are listed yet. Explore the sample teams below while you build your profile.'));
+    if(query)empty.append(button('Clear search',()=>{search.value='';draw();search.focus();}));
+    results.replaceChildren(empty);
+  }
+  search.addEventListener('input',draw);
+  draw();
 }
 function showTeam(team){
   dialog('Meet the person behind the opportunity',body=>{

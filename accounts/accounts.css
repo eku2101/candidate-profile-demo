@@ -67,6 +67,8 @@
 }
 .practice-review { margin-bottom: 0; }
 .practice-review h3 { margin-top: 0; }
+.team-discovery-section, .discovery-profile-actions { margin-top: 26px; }
+.team-discovery-section .empty p:last-child, .team-discovery-section .panel p:last-child { margin-bottom: 0; }
 .feedback-inbox time { display: block; margin-bottom: 12px; color: var(--muted); font-size: .8rem; }
 .feedback-inbox h2 { margin-bottom: 8px; }
 .feedback-inbox .card-meta { margin-bottom: 4px; }
