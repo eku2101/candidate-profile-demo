@@ -64,7 +64,7 @@ export function installHelpChat(getContext){
   }
   form.addEventListener('submit',event=>{event.preventDefault();ask(input.value);});
   document.getElementById('openForwardHelp').addEventListener('click',()=>{
-    if(!log.children.length)addMessage('Vera','Ask how to use Forward or get help describing your experience in your own words.');
+    if(!log.children.length)addMessage('Vera','Hi, I’m Vera. I’m glad you’re here! Whether you’re building your profile or figuring out where to start, we can take it one step at a time. What’s on your mind?');
     dialog.showModal();
   });
 }

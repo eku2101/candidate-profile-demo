@@ -6,11 +6,11 @@
   <meta name="referrer" content="no-referrer" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; connect-src 'self' https://*.supabase.co; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
   <title>Forward — Your account</title>
-  <link rel="stylesheet" href="accounts/accounts.css?v=help-chat-1" />
+  <link rel="stylesheet" href="accounts/accounts.css?v=vera-portrait-1" />
   <script src="profile-model.js" defer></script>
   <script src="team-model.js" defer></script>
   <script src="resume-tools.js?v=resume-feedback-1" defer></script>
-  <script type="module" src="accounts/app.mjs?v=help-chat-1"></script>
+  <script type="module" src="accounts/app.mjs?v=vera-portrait-1"></script>
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
@@ -33,7 +33,13 @@
   <dialog id="reviewDialog" aria-labelledby="dialogTitle"><form method="dialog" class="dialog-close"><button aria-label="Close dialog">×</button></form><div id="dialogBody"></div></dialog>
   <dialog id="forwardHelp" aria-labelledby="forwardHelpTitle">
     <form method="dialog" class="dialog-close"><button aria-label="Close Vera">×</button></form>
-    <h2 id="forwardHelpTitle">Ask Vera</h2>
+    <header class="help-chat-heading">
+      <img class="help-portrait" src="assets/vera-portrait.jpg" width="80" height="80" alt="" />
+      <div>
+        <h2 id="forwardHelpTitle">Ask Vera</h2>
+        <p>Your Forward guide</p>
+      </div>
+    </header>
     <p class="help">Ask about the site or get profile writing tips. When AI is available, it receives the messages you type. Keep passwords and private details out of the chat.</p>
     <div id="forwardHelpLog" class="help-log" role="log" aria-label="Help conversation" tabindex="0"></div>
     <div id="forwardHelpTopics" class="help-topics" aria-label="Common questions"></div>
