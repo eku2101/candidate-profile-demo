@@ -69,6 +69,70 @@
 .practice-review h3 { margin-top: 0; }
 .team-discovery-section, .discovery-profile-actions { margin-top: 26px; }
 .team-discovery-section .empty p:last-child, .team-discovery-section .panel p:last-child { margin-bottom: 0; }
+.community-feed {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr));
+  gap: 20px;
+  margin-top: 22px;
+}
+.community-post { margin: 0; padding: 20px; }
+.community-actions button[aria-pressed=true] { border-color: var(--accent); background: var(--pale); }
+.community-byline { margin-bottom: 12px; }
+.community-byline h2 { font-size: 1.35rem; margin: 0 0 4px; }
+.community-byline p, .community-byline .fake-label { margin: 0 0 4px; }
+.button.community-cover {
+  position: relative;
+  display: block;
+  padding: 0;
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: var(--pale);
+  color: var(--ink);
+  text-align: left;
+}
+.community-cover-placeholder {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 3 / 2;
+}
+.community-cover img { width: 100%; height: 100%; object-fit: cover; }
+.community-cover-label {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  padding: 5px 9px;
+  border-radius: 7px;
+  background: #211a38e8;
+  color: #fff;
+}
+.community-caption { margin: 14px 0; }
+.community-gallery-stage {
+  display: grid;
+  place-items: center;
+  min-height: 180px;
+  border-radius: 12px;
+  background: var(--paper);
+  overflow: hidden;
+}
+.community-gallery-stage img, .community-gallery-stage video {
+  display: block;
+  max-width: 100%;
+  max-height: min(54dvh, 560px);
+  width: auto;
+  height: auto;
+}
+.community-gallery-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0;
+}
+.community-gallery-controls p { margin: 0 3px; }
+.community-descriptions label { overflow-wrap: anywhere; }
+#communityCaption + .notice { margin: 10px 0; }
 .feedback-inbox time { display: block; margin-bottom: 12px; color: var(--muted); font-size: .8rem; }
 .feedback-inbox h2 { margin-bottom: 8px; }
 .feedback-inbox .card-meta { margin-bottom: 4px; }

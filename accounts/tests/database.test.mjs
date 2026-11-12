@@ -32,6 +32,10 @@ before(async()=>{
     create table auth.users(id uuid primary key,email_confirmed_at timestamptz);
     create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
     create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
+    create table storage.objects(bucket_id text not null,name text not null,primary key(bucket_id,name));
+    alter table storage.objects enable row level security;
+    grant usage on schema storage to authenticated;
+    grant select,insert,delete on storage.objects to authenticated;
     create table realtime.messages(payload jsonb,event text,topic text,private boolean,extension text);
     alter table realtime.messages enable row level security;
     grant usage on schema realtime to authenticated;
@@ -43,7 +47,7 @@ before(async()=>{
   const migrations=new URL('../../supabase/migrations/',import.meta.url);
   for(const file of (await readdir(migrations)).filter(name=>name.endsWith('.sql')).sort())await db.exec(await readFile(new URL(file,migrations),'utf8'));
 });
-beforeEach(async()=>{await db.exec('reset role;truncate auth.users cascade;truncate realtime.messages');for(const id of [a,b,m,n])await db.query('insert into auth.users values($1,now())',[id]);});
+beforeEach(async()=>{await db.exec('reset role;truncate auth.users cascade;truncate realtime.messages,storage.objects');for(const id of [a,b,m,n])await db.query('insert into auth.users values($1,now())',[id]);});
 after(()=>db.close());
 test('anonymous callers cannot read profiles, files, or register accounts',async()=>{
   await setupApplicant();
@@ -56,6 +60,35 @@ test('roles cannot change and unpublished drafts never leak between accounts',as
   assert.equal((await as(m,'select * from public.forward_applicant_drafts')).rows.length,0);
   assert.equal((await as(a,'select * from public.forward_hiring_drafts')).rows.length,0);
   await assert.rejects(()=>as(m,'update public.forward_accounts set role=\'applicant\''),/permission denied/);
+});
+test('community media is private until every attachment is uploaded and only its author can remove the post',async()=>{
+  await setupApplicant();await setupManager();
+  const post='55555555-5555-4555-8555-555555555555';
+  const first=a+'/'+post+'/1.jpg';
+  const second=a+'/'+post+'/2.mp4';
+  const posts='select * from public.forward_community_posts';
+  const media="select name from storage.objects where bucket_id='forward-community'";
+  const upload="insert into storage.objects(bucket_id,name) values('forward-community',$1)";
+  await as(a,`insert into public.forward_community_posts(id,author_name,caption,extensions,descriptions)
+    values($1,'Riley','A workshop recap',array['jpg','mp4'],array['Workshop photo','Workshop clip'])`,[post]);
+  await assert.rejects(()=>as(m,upload,[first]),/row-level security/);
+  await assert.rejects(()=>as(a,upload,[a+'/'+post+'/3.jpg']),/row-level security/);
+  await as(a,upload,[first]);
+  assert.equal((await as(m,posts)).rows.length,0);
+  assert.equal((await as(m,media)).rows.length,0);
+  await assert.rejects(()=>rpc(a,'forward_publish_community_post',[post]),/every photo and video/);
+  await assert.rejects(()=>rpc(m,'forward_publish_community_post',[post]),/no longer available/);
+  await as(a,upload,[second]);
+  await rpc(a,'forward_publish_community_post',[post]);
+  await rpc(a,'forward_publish_community_post',[post]);
+  assert.equal((await as(m,posts)).rows.length,1);
+  assert.equal((await as(m,media)).rows.length,2);
+  assert.equal((await as(m,'delete from public.forward_community_posts returning id')).rows.length,0);
+  assert.equal((await as(a,'delete from storage.objects returning name')).rows.length,0);
+  await assert.rejects(()=>as(null,posts),/permission denied/);
+  await as(a,'delete from public.forward_community_posts where id=$1',[post]);
+  assert.equal((await as(m,media)).rows.length,0);
+  assert.equal((await as(a,'delete from storage.objects returning name')).rows.length,2);
 });
 test('a share stays private, pass is hidden, and only a mutual match can chat',async()=>{
   await setupApplicant();
