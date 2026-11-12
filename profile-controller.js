@@ -136,7 +136,12 @@ function showResumePreview(file) {
   $("docPreview").append(preview);
 }
 function showResumeImport(result, file = null) {
-  pendingResumeImport = { ...result, file };
+  const needsConfirmation = Object.values(readProfileFields()).some(value => value.trim()) ||
+    Boolean(savedResumeFile || savedPhotoFile) || featuredRoles.some(role => Object.values(role).some(value => value.trim()));
+  pendingResumeImport = { ...result, file, needsConfirmation };
+  $("resumeImportExistingProfile").hidden = !needsConfirmation;
+  $("confirmResumeOwner").checked = false;
+  $("confirmResumeOwner").required = needsConfirmation;
   const host = $("resumeImportFields");
   host.replaceChildren();
   Object.keys(profileFieldNames).slice(0, 10).forEach(key => {
@@ -276,6 +281,10 @@ async function initializeProfileApp() {
   $("resumeImportForm").addEventListener("submit", async event => {
     event.preventDefault();
     if (!pendingResumeImport) return;
+    if (pendingResumeImport.needsConfirmation && !$("confirmResumeOwner").checked) {
+      $("confirmResumeOwner").reportValidity();
+      return;
+    }
     $("saveResumeImport").disabled = $("cancelResumeImport").disabled = true;
     Object.keys(profileFieldNames).slice(0, 10).forEach(key => {
       const value = $("import-" + key).value.trim();

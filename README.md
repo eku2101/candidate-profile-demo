@@ -113,12 +113,14 @@ This prototype does not upload documents to a server, send email, create account
 
 ## Run locally
 
+A visitor with no saved browser data starts with blank applicant and hiring forms. This demo stores one applicant per browser, so another person using the same browser must clear the previous profile first. Résumé imports into an existing profile require a same-person acknowledgement. Removing required details or exceeding writing limits returns a launched applicant to draft and removes the stale profile from the local review queue until it is corrected and relaunched.
+
 Use the published website or a local HTTP server. Direct `file://` opening can block the PDF worker and browser storage. No installation or build step is required; PDF.js 6.5.438 and its license are included in `vendor/pdfjs/`.
 
 Run the work-preference regression checks with Node.js (no dependencies):
 
 ```powershell
-node --test test-work-preferences.cjs test-resume-profile.cjs test-forward-redesign.cjs test-onboarding.cjs test-team-discovery.cjs
+node --test test-work-preferences.cjs test-resume-profile.cjs test-forward-redesign.cjs test-onboarding.cjs test-team-discovery.cjs test-new-visitor.cjs
 ```
 
 To run a local static preview server with Node.js (this also serves the local portrait image in `assets/`):

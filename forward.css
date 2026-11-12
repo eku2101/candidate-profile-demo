@@ -155,7 +155,8 @@ body.onboarding-active { overflow:hidden; }
 .save-bar { max-width:940px; margin:0 auto 22px; padding:15px 20px; gap:9px; background:white; }
 .save-bar .button { font-size:.75rem; min-height:36px; padding:8px 12px; }
 .save-bar p { font-size:.72rem; }
-.save-bar p:last-child { display:none; }
+.save-bar p:last-child { color:var(--ink-soft); }
+.import-warning input[type="checkbox"] { width:auto; margin-right:8px; }
 #applicantWorkspace .candidate-layout { display:block; max-width:940px; margin:auto; }
 #applicantWorkspace .build-card { padding:30px; }
 #applicantWorkspace .build-card > .eyebrow { display:none; }

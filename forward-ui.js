@@ -45,7 +45,7 @@ function navigateForward(page) {
     renderForwardHome();
   } else if (page === 'profile') {
     if (activeRole === 'hiring') { $('hiringProfilePage').hidden = false; renderHiringProfileStatus(); }
-    else showApplicantPage(applicantLaunched && profileWithinLimits() ? 'hub' : 'builder');
+    else showApplicantPage(getInteractiveApplicant() ? 'hub' : 'builder');
   } else if (page === 'discover') {
     if (activeRole === 'hiring') {
       if (!hiringQuizComplete) { openHiringQuiz(); $('forwardHome').hidden = false; renderForwardHome(); }

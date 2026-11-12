@@ -1062,7 +1062,7 @@
         <button class="button primary" id="saveProfileButton" type="button">Save profile in this browser</button>
         <button class="button secondary" id="clearProfileButton" type="button">Clear saved profile</button>
         <p data-profile-save-status role="status">No profile saved yet.</p>
-        <p>One profile is saved in this browser on this device. Clearing this site's browser data removes it. Your résumé is read on your device.</p>
+        <p>A new browser starts with a blank profile. This browser remembers one applicant. On a shared computer, clear the saved profile before another person starts. Your résumé stays on this device.</p>
       </div>
 
       <details class="card discussion-panel">
@@ -1662,7 +1662,7 @@
             </div>
             <div class="full">
               <label for="hiringTeamName">Team or manager name</label>
-              <input id="hiringTeamName" value="Northstar hiring team" maxlength="80" placeholder="Shown only as local demo activity to applicants you view" />
+              <input id="hiringTeamName" maxlength="80" placeholder="Your team or manager name" />
               <p class="help">Optional in this demo. It identifies the local activity signal only—it is not a matching input.</p>
             </div>
           </div>
@@ -1760,6 +1760,10 @@
       <p id="resumeImportDescription">Check the extracted details, especially jobs and dates. Saving replaces the matching fields below in your profile; empty fields leave existing details unchanged. Your personal story stays as written.</p>
       <p class="import-warning" id="resumeImportWarnings" role="status"></p>
       <form id="resumeImportForm">
+        <div id="resumeImportExistingProfile" class="import-warning" hidden>
+          <p>This browser already has applicant information. For a different person, cancel this import and use Clear saved profile before starting.</p>
+          <label><input id="confirmResumeOwner" type="checkbox" /> This résumé is for the same person. Keep my existing story, photo, preferences, and featured roles.</label>
+        </div>
         <div class="question-grid" id="resumeImportFields"></div>
         <details>
           <summary>View all extracted text</summary>
@@ -2024,7 +2028,7 @@
     }
 
     function getInteractiveApplicant() {
-      if (!applicantQuizComplete || !applicantLaunched || !profileWithinLimits()) return null;
+      if (!applicantQuizComplete || !applicantLaunched || !isLaunchReady() || !profileWithinLimits()) return null;
       const name = safeText($("profileNameInput").value) || "Your name";
       const skills = $("profileSkillsInput").value.split(",").map(skill => safeText(skill)).filter(Boolean);
       const values = $("profileValuesInput").value.split(",").map(value => safeText(value)).filter(Boolean);
@@ -2053,9 +2057,19 @@
     }
 
     function syncInteractiveApplicant() {
+      if (applicantLaunched && (!applicantQuizComplete || !isLaunchReady() || !profileWithinLimits())) {
+        applicantLaunched = false;
+        showToast("Your profile is back in draft. Review the required fields and writing limits, then launch it again.");
+      }
       const interactiveApplicant = getInteractiveApplicant();
-      if (!interactiveApplicant) return;
       const existingIndex = rankedApplicants.findIndex(person => person.id === "avery");
+      if (!interactiveApplicant) {
+        if (existingIndex !== -1) {
+          rankedApplicants.splice(existingIndex, 1);
+          if (existingIndex < currentIndex) currentIndex--;
+        }
+        return;
+      }
       if (existingIndex === -1) rankedApplicants.push(interactiveApplicant);
       else rankedApplicants[existingIndex] = interactiveApplicant;
     }
