@@ -49,6 +49,14 @@ export function createAccountAPI(client) {
       contentType:file.type,upsert:false,cacheControl:'60'
     })),
     removeCommunityAssets:paths=>checked(client.storage.from('forward-community').remove(paths)),
+    communityEngagement:postIds=>checked(client.rpc('forward_community_engagement',{p_post_ids:postIds})),
+    setCommunityLike:(postId,liked)=>checked(liked
+      ?client.from('forward_community_likes').upsert({post_id:postId},{onConflict:'post_id,member_id',ignoreDuplicates:true})
+      :client.from('forward_community_likes').delete().eq('post_id',postId)),
+    communityComments:postId=>checked(client.from('forward_community_comments').select('*')
+      .eq('post_id',postId).order('created_at',{ascending:false}).order('id',{ascending:false}).limit(50)),
+    addCommunityComment:(postId,authorName,body)=>checked(client.from('forward_community_comments')
+      .insert({post_id:postId,author_name:authorName,body})),
     employerStatus:async()=> (await checked(client.rpc('forward_employer_status')))[0]||null,
     requestVerification:website=>checked(client.rpc('forward_request_employer_verification',{p_website:website})),
     messages:(id,before)=>{

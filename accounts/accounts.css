@@ -108,6 +108,13 @@
   color: #fff;
 }
 .community-caption { margin: 14px 0; }
+.community-engagement { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.community-engagement button[aria-pressed=true] { background: var(--pale); border-color: var(--accent); }
+.community-comments { list-style: none; padding: 0; margin: 12px 0; }
+.community-comment { padding: 12px; margin-bottom: 8px; border-radius: 10px; background: var(--paper); }
+.community-comment p { margin: 0; }
+.community-comment .community-comment-meta { display: flex; flex-wrap: wrap; gap: 5px 12px; margin-bottom: 4px; color: var(--ink); }
+.community-comment-form { border-top: 1px solid var(--line); padding-top: 10px; }
 .community-gallery-stage {
   display: grid;
   place-items: center;
