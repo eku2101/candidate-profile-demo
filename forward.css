@@ -265,6 +265,26 @@ body.welcome-active { overflow:hidden; }
 .welcome-example p { font-family:var(--serif); font-size:1.13rem; margin:8px 0 0; }
 .welcome-footer { display:flex; justify-content:space-between; align-items:center; gap:20px; margin-top:25px; }
 .welcome-footer > span { color:var(--ink-soft); font-size:.75rem; }
+.home-vera { display:flex; flex-wrap:wrap; align-items:center; gap:14px; margin-top:20px; padding:16px; border:1px solid var(--line); border-radius:16px; background:var(--accent-wash); }
+.home-vera-portrait { flex:none; width:64px; height:64px; object-fit:cover; border-radius:50%; border:2px solid white; background:var(--accent-wash); }
+.home-vera-copy { flex:1 1 160px; }
+.home-vera h2 { margin:0 0 4px; font-size:1.15rem; }
+.home-vera p { margin:0; color:var(--ink-soft); font-size:.84rem; }
+.home-help-dialog { width:min(560px,calc(100% - 24px)); max-height:calc(100dvh - 24px); padding:20px; border:1px solid var(--line); border-radius:20px; background:white; color:var(--ink); }
+.home-help-dialog::backdrop { background:#211733aa; }
+.home-help-close { float:right; }
+.home-help-close button { width:40px; height:40px; border:0; border-radius:50%; background:var(--accent-wash); color:var(--ink); font-size:1.4rem; }
+.home-help-heading { display:flex; align-items:center; gap:12px; margin-bottom:8px; }
+.home-help-heading h2 { margin:0; font-size:1.45rem; }
+.home-help-note { margin:8px 0 12px; color:var(--ink-soft); font-size:.8rem; }
+.home-help-note:empty { display:none; }
+.home-help-dialog .help-log { display:grid; gap:8px; max-height:min(32dvh,300px); overflow:auto; }
+.home-help-dialog .help-message { padding:10px 12px; border-radius:10px; background:var(--paper); overflow-wrap:anywhere; }
+.home-help-dialog .help-message-user { background:var(--accent-wash); }
+.home-help-dialog .help-message p { margin:4px 0 0; white-space:pre-wrap; }
+.home-help-dialog .help-topics { display:flex; flex-wrap:wrap; gap:6px; margin:12px 0; }
+.home-help-dialog .help-topics .button { padding:5px 9px; min-height:34px; font-size:.76rem; }
+.home-help-dialog textarea { display:block; width:100%; margin:5px 0 10px; padding:8px; border:1px solid #aaa3bc; border-radius:8px; font:inherit; resize:vertical; }
 @media (max-width:1050px) {
   .nav { gap:18px; padding:0 22px; }
   .main-navigation { gap:0; }
