@@ -1,0 +1,10 @@
+{
+  "name": "forward-accounts",
+  "private": true,
+  "scripts": {
+    "build:vendor": "node build-vendor.mjs",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "dependencies": { "@supabase/supabase-js": "^2.102.0" },
+  "devDependencies": { "@electric-sql/pglite": "^0.3.0", "esbuild": "^0.25.0" }
+}

@@ -402,6 +402,7 @@ function initializeForwardUI() {
   setupBuilder();
   setupWorkOnboarding();
   setupTeamDiscovery();
+  import('./accounts/entry.mjs').then(module => module.addAccountEntry()).catch(() => {});
   const conversation = makeElement('details', 'card profile-conversation');
   conversation.append(makeElement('summary', '', 'Prepare for a conversation about how you work'), $('applicantLiveDiscussion'));
   document.querySelector('#applicantLivePage .applicant-hub-grid').insertAdjacentElement('afterend', conversation);

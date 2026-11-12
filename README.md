@@ -133,6 +133,8 @@ Then visit `http://localhost:8012`.
 
 ## Next stage: access for real employers
 
+The `feature/shared-accounts` implementation adds a gated account workspace, private database schema, authenticated résumé service, and applicant-controlled sharing. See [account setup and hosted acceptance checks](accounts/SETUP.md). This feature remains disabled until an owner-controlled Supabase project, email delivery, and real cross-device tests are completed. The browser-only class demo continues to work independently.
+
 This is a plan, not a feature already enabled. Today, an employer on another computer cannot see an applicant's saved profile or résumé. The website is public; the locally saved files are not uploaded with it.
 
 1. **Give people their own accounts.** Add applicant sign-in, employer sign-in, and verified company membership. Keep the two roles separate from the current demonstration switcher.
