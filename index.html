@@ -1007,7 +1007,7 @@
       .media-upload-row { align-items: flex-start; flex-direction: column; }
     }
   </style>
-  <link rel="stylesheet" href="forward.css?v=vera-home-1" />
+  <link rel="stylesheet" href="forward.css?v=expert-demo-1" />
 </head>
 <body>
   <section class="intro-overlay" id="introOverlay" role="dialog" aria-modal="true" aria-labelledby="introTitle" aria-describedby="introCopy">
@@ -1425,9 +1425,10 @@
               <span id="appInitials">AS</span>
             </div>
             <div>
-              <h3 id="appName">Alex Santos</h3>
-              <p class="role" id="appRole">Product Designer</p>
-              <span class="location" id="appLocation">Brooklyn, NY · Portfolio uploaded</span>
+              <p class="eyebrow demo-applicant-label" id="appDemoLabel" hidden>Fictional demo applicant</p>
+              <h3 id="appName"></h3>
+              <p class="role" id="appRole"></p>
+              <span class="location" id="appLocation"></span>
             </div>
             <span class="match-badge" id="profileScore">Experience context</span>
           </div>
@@ -1435,6 +1436,7 @@
           <p class="summary" id="appSummary"></p>
           <div class="tags" id="appTags"></div>
           <div id="appCareer"></div>
+          <div id="appDemoExtras"></div>
           <div class="review-story">
             <section class="story-panel">
               <p class="eyebrow">Why this work matters</p>
@@ -1679,18 +1681,19 @@
       <button class="close" id="closeFeedback" type="button" aria-label="Close feedback">×</button>
       <p class="eyebrow">Pass with feedback</p>
       <h2 id="feedbackTitle">Help this applicant find a better fit.</h2>
-      <p>Save a structured note for <b id="feedbackName">Alex</b>. In a full product, approved feedback could improve future recommendations.</p>
-      <label for="feedbackReason">Why isn't this role the right fit?</label>
+      <p>Write feedback for <b id="feedbackName"></b>. Name a role requirement, recognize a specific strength, and offer a practical next step.</p>
+      <div id="feedbackDemoExample"></div>
+      <label for="feedbackReason">What informed your decision?</label>
       <select id="feedbackReason">
-        <option>Education level does not match this role</option>
-        <option>Skill level does not match the job requirements</option>
-        <option>Experience is not aligned with this position</option>
-        <option>Location or work arrangement does not match</option>
-        <option>Another applicant is a closer fit right now</option>
+        <option>A required qualification needs discussion</option>
+        <option>The role requires a skill I didn’t see demonstrated</option>
+        <option>The role requires experience at a different scope</option>
+        <option>The role has a different location or schedule requirement</option>
+        <option>Another applicant showed more evidence for a specific requirement</option>
       </select>
       <label for="feedbackNote">Optional constructive note</label>
-      <textarea id="feedbackNote" placeholder="For example: Your design work is strong; B2B platform experience would help for this role."></textarea>
-      <label class="share-feedback"><input id="shareFeedbackWithApplicant" type="checkbox" checked /> Share this constructive note with the applicant in their feedback channel.</label>
+      <textarea id="feedbackNote" maxlength="1200" placeholder="Describe what you saw in the profile, then suggest one step the applicant could take."></textarea>
+      <label class="share-feedback" id="feedbackShareOption"><input id="shareFeedbackWithApplicant" type="checkbox" checked /> Share this constructive note with the applicant in their demo feedback channel.</label>
       <div class="dialog-actions">
         <button class="cancel" id="cancelFeedback" type="button">Cancel</button>
         <button class="submit" id="saveFeedback" type="button">Save feedback &amp; continue</button>
@@ -1701,17 +1704,18 @@
   <div class="overlay" id="profileModal" hidden role="dialog" aria-modal="true" aria-labelledby="detailName">
     <article class="dialog">
       <button class="close" id="closeProfile" type="button" aria-label="Close public profile">×</button>
-      <p class="eyebrow">Public applicant profile</p>
+      <p class="eyebrow" id="detailProfileLabel">Public applicant profile</p>
       <div class="profile-top">
         <div class="candidate-avatar" id="detailAvatar">
           <img id="detailProfileImage" alt="" hidden />
           <span id="detailInitials">AS</span>
         </div>
-        <h2 id="detailName">Alex Santos</h2>
+        <h2 id="detailName"></h2>
       </div>
       <p id="detailText"></p>
       <div class="tags" id="detailTags"></div>
       <div id="detailCareer"></div>
+      <div id="detailDemoExtras"></div>
       <div class="profile-story">
         <section class="story-panel">
           <p class="eyebrow">Why this work matters</p>
@@ -1802,65 +1806,9 @@
   <script src="profile-model.js"></script>
   <script src="team-model.js"></script>
   <script src="resume-tools.js"></script>
+  <script src="demo-applicants.js?v=expert-demo-1"></script>
   <script>
-    const publicApplicants = [
-      {
-        id: "alex",
-        name: "Alex Santos",
-        initials: "AS",
-        role: "Product Designer",
-        location: "Brooklyn, NY · Portfolio uploaded",
-        summary: "Product designer who turns customer insight into simple, useful digital experiences. Seven years across early-stage teams and established platforms.",
-        skills: ["Product strategy", "Design systems", "Figma", "Mentorship"],
-        mission: "I design public-facing tools so people can understand, trust, and shape the systems that affect their everyday lives.",
-        values: ["Accessibility", "Generosity", "Shared ownership"],
-        wellbeing: "Introduced calmer critique rituals that gave every voice room and lowered the pressure to have instant answers.",
-        colleagueSupport: "Built a peer-mentoring circle for newer designers and shared reusable research templates across teams.",
-        communityImpact: "Donated design time to a neighborhood legal-aid clinic improving access to essential services."
-      },
-      {
-        id: "jordan",
-        name: "Jordan Lee",
-        initials: "JL",
-        role: "Front-end Developer",
-        location: "Chicago, IL · Résumé & projects uploaded",
-        summary: "Front-end developer focused on accessible, responsive web experiences, with four years of JavaScript and cross-functional collaboration.",
-        skills: ["JavaScript", "React", "Accessibility", "CSS"],
-        mission: "I build interfaces that make technology less frustrating and more welcoming for the people using it.",
-        values: ["Curiosity", "Reliability", "Inclusion"],
-        wellbeing: "Started optional co-working blocks that helped a distributed team unblock without adding meeting fatigue.",
-        colleagueSupport: "Paired with designers and junior engineers to turn accessibility questions into practical code patterns.",
-        communityImpact: "Maintains an open-source starter kit that helps small nonprofits build accessible event pages."
-      },
-      {
-        id: "maya",
-        name: "Maya Patel",
-        initials: "MP",
-        role: "Marketing Strategist",
-        location: "Austin, TX · Campaign portfolio uploaded",
-        summary: "Strategic marketer who connects audience research with practical brand, content, and growth campaigns.",
-        skills: ["Brand strategy", "Content", "Analytics", "Campaigns"],
-        mission: "I help mission-led organizations communicate in ways that make people feel seen, not sold to.",
-        values: ["Empathy", "Transparency", "Stewardship"],
-        wellbeing: "Protected focus time during campaign launches and normalized sharing capacity before taking on more work.",
-        colleagueSupport: "Created message banks and facilitation guides that gave quieter collaborators more ways to contribute.",
-        communityImpact: "Partnered with a local food-security coalition on a multilingual donor and volunteer campaign."
-      },
-      {
-        id: "sam",
-        name: "Sam Rivera",
-        initials: "SR",
-        role: "Data Analyst",
-        location: "Remote · Case study uploaded",
-        summary: "Data analyst who makes complex information easy for teams to use through dashboards, experiments, and clear storytelling.",
-        skills: ["SQL", "Tableau", "Experimentation", "Python"],
-        mission: "I make data understandable enough that more people can participate in decisions with confidence.",
-        values: ["Clarity", "Fairness", "Learning"],
-        wellbeing: "Reframed weekly metrics reviews around learning and context instead of individual performance pressure.",
-        colleagueSupport: "Hosted friendly analytics office hours so nontechnical teammates could test ideas without judgment.",
-        communityImpact: "Volunteers data storytelling skills with a youth employment program to surface equitable outcomes."
-      }
-    ];
+    const publicApplicants = globalThis.ForwardDemoApplicants;
 
     /*
       Browser-only demo note: these objects simulate data held in a protected
@@ -1868,10 +1816,9 @@
       A real product would keep this data server-side behind authentication.
     */
     const privateApplicantSignals = {
-      alex: { experience: "senior", focus: "protected", brainstorming: "frequent", communication: "written", checkIns: "milestones", rhythm: "flexible", environment: "remote" },
-      jordan: { experience: "mid", focus: "flexible", brainstorming: "frequent", communication: "live", checkIns: "frequent", rhythm: "fast", environment: "startup" },
-      maya: { experience: "senior", focus: "protected", brainstorming: "occasional", communication: "written", checkIns: "frequent", rhythm: "steady", environment: "enterprise" },
-      sam: { experience: "mid", focus: "protected", brainstorming: "occasional", communication: "flexible", checkIns: "milestones", rhythm: "steady", environment: "remote" }
+      jordan: { experience: "senior", focus: "protected", brainstorming: "frequent", communication: "written", checkIns: "milestones", rhythm: "flexible", environment: "remote" },
+      amina: { experience: "senior", focus: "flexible", brainstorming: "frequent", communication: "live", checkIns: "frequent", rhythm: "steady", environment: "enterprise" },
+      mateo: { experience: "senior", focus: "protected", brainstorming: "occasional", communication: "flexible", checkIns: "milestones", rhythm: "steady", environment: "remote" }
     };
 
     const $ = id => document.getElementById(id);
@@ -2305,6 +2252,49 @@
       }));
     }
 
+    function renderDemoFeedback(host, example) {
+      host.replaceChildren();
+      if (!example) return;
+      const details = document.createElement("details");
+      details.className = "career-section demo-feedback";
+      const title = document.createElement("summary");
+      title.textContent = "Example feedback";
+      details.append(title);
+      for (const [label, text] of [
+        ["Practice role", example.role],
+        ["What the role requires", example.requirement],
+        ["Reason", example.reason],
+        ["Suggested next step", example.nextStep]
+      ]) {
+        const heading = document.createElement("h4");
+        heading.textContent = label;
+        const paragraph = document.createElement("p");
+        paragraph.textContent = text;
+        details.append(heading, paragraph);
+      }
+      host.append(details);
+    }
+
+    function renderDemoExtras(prefix, person) {
+      const host = $(prefix + "DemoExtras");
+      host.replaceChildren();
+      if (!person.demoImages) return;
+      const figure = document.createElement("figure");
+      figure.className = "demo-workplace";
+      const image = document.createElement("img");
+      image.src = "assets/" + person.demoImages.showcase;
+      image.alt = person.demoImages.alt;
+      image.width = 1050;
+      image.height = 700;
+      image.loading = "lazy";
+      const caption = document.createElement("figcaption");
+      caption.textContent = person.demoImages.caption;
+      figure.append(image, caption);
+      const feedbackHost = document.createElement("div");
+      renderDemoFeedback(feedbackHost, person.feedbackExample);
+      host.append(figure, feedbackHost);
+    }
+
     function renderApplicantCard() {
       const person = currentApplicant();
       if (!person) {
@@ -2320,6 +2310,7 @@
       const experience = getMatchingProfile(person).experience;
       renderAvatar("appAvatar", "appProfileImage", "appInitials", person.name, person.imageUrl);
       $("appName").textContent = person.name;
+      $("appDemoLabel").hidden = !person.feedbackExample;
       $("appRole").textContent = person.role;
       $("appLocation").textContent = person.location;
       $("appSummary").textContent = person.summary;
@@ -2331,6 +2322,7 @@
       }));
       renderPublicStory("app", person);
       renderCareer("appCareer", person);
+      renderDemoExtras("app", person);
       renderResumeDownload('appResume', person);
       $("profileScore").textContent = person.id === "avery" ? "Demo experience baseline" : experienceLabels[experience];
       $("fitScore").textContent = experienceLabels[experience];
@@ -2611,6 +2603,9 @@
       const person = currentApplicant();
       if (!person || activeRole !== "hiring") return;
       $("feedbackName").textContent = person.name;
+      $("feedbackShareOption").hidden = Boolean(person.feedbackExample);
+      $("shareFeedbackWithApplicant").checked = !person.feedbackExample;
+      renderDemoFeedback($("feedbackDemoExample"), person.feedbackExample);
       renderResumeDownload('feedbackResume', person);
       $("feedbackModal").hidden = false;
       $("feedbackReason").focus();
@@ -2622,6 +2617,7 @@
       recordManagerView(person);
       renderAvatar("detailAvatar", "detailProfileImage", "detailInitials", person.name, person.imageUrl);
       $("detailName").textContent = person.name;
+      $("detailProfileLabel").textContent = person.feedbackExample ? "Fictional demo applicant" : "Public applicant profile";
       $("detailText").textContent = person.summary;
       $("detailTags").replaceChildren(...person.skills.map(skill => {
         const tag = document.createElement("span");
@@ -2631,6 +2627,7 @@
       }));
       renderPublicStory("detail", person);
       renderCareer("detailCareer", person);
+      renderDemoExtras("detail", person);
       renderResumeDownload('detailResume', person);
       $("profileModal").hidden = false;
       $("closeProfile").focus();
@@ -2818,7 +2815,7 @@
         person,
         reason: $("feedbackReason").value,
         note: safeText($("feedbackNote").value),
-        shared: $("shareFeedbackWithApplicant").checked,
+        shared: !person.feedbackExample && $("shareFeedbackWithApplicant").checked,
         reviewer: currentHiringTeamName()
       });
       $("feedbackNote").value = "";
@@ -2826,7 +2823,7 @@
       $("feedbackModal").hidden = true;
       renderFeedback();
       renderApplicantFeedback();
-      showToast("Feedback saved for " + person.name + "; future recommendations can learn from it.");
+      showToast(person.feedbackExample ? "Practice feedback saved in this demo." : "Feedback saved for " + person.name + ".");
       advance("moving-left");
     });
 
