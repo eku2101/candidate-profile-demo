@@ -11,7 +11,7 @@ export function createAccountAPI(client) {
     save:(document,version)=>checked(client.rpc('forward_save_draft',{p_document:document,p_version:version})),
     publish:(role,version)=>checked(client.rpc(role==='applicant'?'forward_publish_applicant':'forward_publish_hiring',{p_version:version})),
     unpublish:()=>checked(client.rpc('forward_unpublish')),
-    teams:()=>checked(client.from('forward_hiring_publications').select('*').order('updated_at',{ascending:false}).limit(100)),
+    teams:()=>checked(client.rpc('forward_open_roles')),
     applicants:()=>checked(client.from('forward_applicant_publications').select('*').order('updated_at',{ascending:false})),
     prompts:applicantId=>checked(client.rpc('forward_conversation_prompts',{p_applicant_id:applicantId})),
     shares:()=>list('forward_shares'),
@@ -21,6 +21,17 @@ export function createAccountAPI(client) {
     recordProfileView:id=>checked(client.rpc('forward_record_profile_view',{p_profile_id:id})),
     profileViewers:()=>checked(client.rpc('forward_profile_viewers')),
     chooseConnection:(id,choice)=>checked(client.rpc('forward_choose_connection',{p_other_id:id,p_choice:choice})),
+    declineWithFeedback:(id,reason,nextStep)=>checked(client.rpc('forward_decline_with_feedback',{
+      p_applicant_id:id,p_reason:reason,p_next_step:nextStep
+    })),
+    feedback:(before,limit=30)=>{
+      const query=client.from('forward_decline_feedback').select('id,kind,company,role_title,reason,next_step,created_at')
+        .order('id',{ascending:false}).limit(limit);
+      return checked(before===undefined?query:query.lt('id',before));
+    },
+    chatStarter:id=>checked(client.rpc('forward_chat_starter',{p_connection_id:id})),
+    employerStatus:async()=> (await checked(client.rpc('forward_employer_status')))[0]||null,
+    requestVerification:website=>checked(client.rpc('forward_request_employer_verification',{p_website:website})),
     messages:(id,before)=>{
       const query=client.from('forward_messages').select('*').eq('connection_id',id).order('id',{ascending:false}).limit(50);
       return checked(before===undefined?query:query.lt('id',before));

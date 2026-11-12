@@ -1,6 +1,6 @@
 import {accountConfig} from './config.js?v=public-signup-1';
 import {configReady,applicantFields,hiringBackgroundFields,hiringResumeFields,questions,questionLabels,normalizeApplicant,normalizeImages,applicantIssues,importReviewedFields,wordCount,discussionPrompts} from './model.mjs?v=hiring-resume-1';
-import {createAccountAPI} from './api.mjs?v=profile-images-1';
+import {createAccountAPI} from './api.mjs?v=hiring-feedback-1';
 import {validateAuthInput,submitAuthentication,authErrorMessage,newPasswordError} from './auth-flow.mjs?v=public-signup-1';
 import {installHelpChat} from './help-chat.mjs?v=vera-portrait-1';
 const $=id=>document.getElementById(id);
@@ -8,6 +8,8 @@ const node=(tag,text,className)=>{const e=document.createElement(tag);if(text!==
 const button=(text,fn,kind='secondary')=>{const e=node('button',text,'button '+kind);e.type='button';e.addEventListener('click',()=>run(e,fn));return e;};
 let client,api,user,account,draft,version=0,publication=null,files=[],shares=[],teams=[],step=0,route='profile',dirty=false,revision=0,busy=false,authMode='signin',sessionEpoch=0,recovery=false,pendingEmail='';
 let stopChat=()=>{};
+let stopFeedback=()=>{};
+let employerVerification=null;
 function status(message,error=false){
   const local=!$('authPage').hidden?$('authStatus'):!$('confirmationPage').hidden?$('confirmationStatus'):null;
   const output=local||$('status');output.textContent=message;output.classList.toggle('error',error);
@@ -179,8 +181,12 @@ function renderImageEditor(host){
 }
 async function loadOwned(){
   const epoch=sessionEpoch;
-  const [saved,published,documents,grants]=await Promise.all([api.draft(account.role,user.id),api.publication(account.role,user.id),api.files(user.id),api.shares()]);
+  const [saved,published,documents,grants,verification]=await Promise.all([
+    api.draft(account.role,user.id),api.publication(account.role,user.id),api.files(user.id),api.shares(),
+    account.role==='hiring'?api.employerStatus():null
+  ]);
   if(epoch!==sessionEpoch)return false;
+  employerVerification=verification;
   if(account.role==='applicant')draft=normalizeApplicant(saved?.document);
   else{
     const document=saved?.document;
@@ -201,6 +207,10 @@ async function navigate(next,connectionId){
   else if(next==='discover')await renderDiscovery();
   else if(next==='messages')await renderMessages(connectionId);
   else if(next==='views')await renderProfileViews();
+  else if(next==='feedback'){
+    $('feedbackNotice').hidden=true;
+    await renderFeedback();
+  }
   else await renderSharing();
   $('workspaceTitle').focus();
   window.scrollTo(0,0);
@@ -209,6 +219,7 @@ function renderNav(){
   const items=account.role==='applicant'?[['profile','My profile'],['discover','Discover teams'],['sharing','Sharing']]:[['profile','My hiring profile'],['sharing','Applicants']];
   items.push(['messages','Messages']);
   items.push(['views','Profile views']);
+  if(account.role==='applicant')items.push(['feedback','Feedback']);
   $('accountNav').replaceChildren(...items.map(([id,label])=>{const b=button(label,()=>navigate(id));if(route===id)b.setAttribute('aria-current','page');return b;}));$('accountNav').hidden=false;
 }
 function renderEditor(){
@@ -370,10 +381,60 @@ async function renderProfileViews(){
   host.append(list);
 }
 
+function renderEmployerVerification(panel){
+  const sameCompany=employerVerification?.company.toLowerCase()===draft.fields.company.trim().toLowerCase();
+  const verification=sameCompany?employerVerification.status:null;
+  if(verification==='approved'){
+    panel.append(node('p','Employer verified. Confirm or republish your opening every 30 days to keep it in Discover teams.','notice'));
+    if(publication){
+      const renewBy=new Date(new Date(publication.updated_at).getTime()+30*86400000);
+      panel.append(node('p',renewBy>new Date()
+        ?'Confirm this opening by '+renewBy.toLocaleDateString()+'.'
+        :'This opening is hidden until you confirm that it’s still open.','help'));
+    }
+    return;
+  }
+  const section=node('section',undefined,'notice');
+  section.append(node('h3','Verify your employer'));
+  if(verification==='pending'){
+    section.append(node('p','Your request is pending review. Check back here for a decision.'));
+  }else{
+    section.append(node('p',verification==='rejected'
+      ?'Forward couldn’t verify this request. Check your company name and official website before submitting again.'
+      :'Forward reviews your affiliation with the company before you can publish a role. Use your official company website.'));
+    const label=node('label','Official company website');
+    const input=node('input');
+    input.id=label.htmlFor='employerWebsite';
+    input.type='url';
+    input.placeholder='https://example.org';
+    input.maxLength=250;
+    input.required=true;
+    section.append(label,input,button('Request verification',async()=>{
+      if(!input.reportValidity())return;
+      if(!/^https:\/\//i.test(input.value.trim()))throw new Error('Enter a website starting with https://.');
+      if(!draft.fields.company.trim())throw new Error('Add your company name in Manager & role first.');
+      await saveDraft();
+      await api.requestVerification(input.value.trim());
+      employerVerification=await api.employerStatus();
+      renderEditor();
+      status('Employer verification requested.');
+    },'primary'));
+  }
+  section.append(button('Check verification status',async()=>{
+    employerVerification=await api.employerStatus();
+    renderEditor();
+  }));
+  panel.append(section);
+}
+
 function renderPublishing(panel){
   const applicant=account.role==='applicant';
   panel.append(node('p',publication?`A shared version exists. ${dirty||publication.version!==version?'Your latest draft edits are not shared yet.':'Your saved draft and shared version match.'}`:'No profile is shared yet.','notice'));
-  if(applicant)renderApplicantStory(panel,publicApplicant(draft));else renderTeamStory(panel,{...draft.fields,answers:draft.answers,images:draft.images});
+  if(applicant)renderApplicantStory(panel,publicApplicant(draft));
+  else{
+    renderEmployerVerification(panel);
+    renderTeamStory(panel,{...draft.fields,answers:draft.answers,images:draft.images});
+  }
   if(applicant){
     panel.append(node('p',currentFile()?'Résumé to include: '+currentFile().name:'No résumé will be included. You can still share your profile.','help'));
     panel.append(button('Preview as a hiring manager',()=>dialog('Hiring manager preview',body=>{
@@ -383,7 +444,9 @@ function renderPublishing(panel){
       else body.append(node('p','No résumé attached.'));
     })));
   }
-  panel.append(button(applicant?'Review sharing version →':'Review publication →',()=>{
+  const canPublish=applicant||(employerVerification?.status==='approved'
+    &&employerVerification.company.toLowerCase()===draft.fields.company.trim().toLowerCase());
+  if(canPublish)panel.append(button(applicant?'Review sharing version →':publication?'Review & renew opening →':'Review publication →',()=>{
     const issues=applicant?applicantIssues(draft,true):ForwardTeams.issues(draft.fields,draft.answers);
     if(issues.length)throw new Error(issues[0].message);
     if(!applicant){
@@ -400,8 +463,18 @@ function renderPublishing(panel){
       },'primary'));
     });
   },'primary'));
-  if(publication)panel.append(button(applicant?'Unshare from everyone':'Unpublish hiring profile',()=>{
-    dialog(applicant?'Withdraw all sharing?':'Unpublish your hiring profile?',body=>{body.append(node('p',applicant?'Managers will lose access to your profile and résumé. Your chats with them will be removed for both people. Copies already downloaded cannot be retrieved.':'Your manager profile will disappear from Discover teams. Your draft stays saved. Existing applicants who shared with you remain in your applicant list.'),button('Confirm withdrawal',async()=>{await api.unpublish();publication=null;shares=await api.shares();closeDialog();renderEditor();status('Sharing withdrawn. Your private draft is saved.');},'danger'));});
+  if(publication)panel.append(button(applicant?'Unshare from everyone':'Close role & notify applicants',()=>{
+    dialog(applicant?'Withdraw all sharing?':'Close this role?',body=>{
+      body.append(node('p',applicant?'Managers will lose access to your profile and résumé. Your chats with them will be removed for both people. Copies already downloaded cannot be retrieved.':'The opening will leave Discover teams. Applicants currently sharing with you will receive a private update. Each applicant can withdraw your access from Sharing.'));
+      body.append(button(applicant?'Confirm withdrawal':'Close role & send updates',async()=>{
+        await api.unpublish();
+        publication=null;
+        shares=await api.shares();
+        closeDialog();
+        renderEditor();
+        status(applicant?'Sharing withdrawn. Your private draft is saved.':'Role closed. Applicants who shared with you can see the update in Feedback.');
+      },'danger'));
+    });
   },'danger'));
 }
 function renderResumeUpload(panel){
@@ -621,7 +694,7 @@ async function renderDiscovery(){
   heading('DISCOVER TEAMS','Choose your next team, too.','Meet the hiring manager and explore how the team works. Managers can see when someone opens their full profile.');
   const host=$('workspaceContent');host.replaceChildren(node('p','Loading teams…'));teams=await api.teams();shares=await api.shares();host.replaceChildren();
   host.append(button('See hiring manager examples',()=>showExampleProfiles('hiring')));
-  host.append(node('p','Manager and company descriptions are supplied by account holders. Forward has not independently verified their employment or vacancies. Review the person and organization before sharing your résumé.','notice'));
+  host.append(node('p','Employers in Discover teams have been reviewed by Forward and must confirm their openings every 30 days. You decide who can access your résumé.','notice'));
   const label=node('label','Search roles, managers, companies, or locations');label.htmlFor='teamSearch';const search=node('input');search.id='teamSearch';search.type='search';host.append(label,search);const count=node('p',undefined,'help');count.setAttribute('role','status');host.append(count);const cards=node('div',undefined,'cards');host.append(cards);
   const draw=()=>{cards.replaceChildren();const list=teams.filter(t=>[t.profile.managerName,t.profile.company,t.profile.roleTitle,t.profile.location].join(' ').toLowerCase().includes(search.value.trim().toLowerCase()));count.textContent=`${list.length}${teams.length===100?' of the 100 most recently updated':''} teams to explore`;for(const team of list){const card=node('article',undefined,'panel');card.append(node('p',team.profile.company,'eyebrow'),node('h2',team.profile.roleTitle),node('p',team.profile.managerName+' · '+team.profile.location,'card-meta'),node('p',team.profile.roleSummary),button('Meet the manager →',()=>showTeam(team),'primary'));cards.append(card);}if(!list.length)cards.append(node('p','No published teams match yet. Try another search or come back after a manager publishes a profile.','empty'));};search.addEventListener('input',draw);draw();
 }
@@ -666,10 +739,12 @@ async function renderSharing(){
     const copy=node('div');
     copy.append(node('strong',team?.profile.managerName||'Manager with an unpublished profile'),node('p',team?.profile.company||''));
     if(connection?.matched)copy.append(node('p','Matched','card-meta'));
-    else if(connection?.applicant_ready)copy.append(node('p','Open to chat','card-meta'));
+    else if(connection?.manager_choice==='pass')copy.append(node('p','Declined · Feedback available','card-meta'));
+    else if(connection?.applicant_ready&&team)copy.append(node('p','Open to chat','card-meta'));
     const controls=node('div',undefined,'actions');
     if(connection?.matched)controls.append(button('Open chat',()=>navigate('messages',connection.id),'primary'));
-    else if(!connection?.applicant_ready)controls.append(button('I’m open to chat',async()=>{
+    else if(connection?.manager_choice==='pass')controls.append(button('Read feedback',()=>navigate('feedback')));
+    else if(team&&!connection?.applicant_ready)controls.append(button('I’m open to chat',async()=>{
       const matched=await api.chooseConnection(grant.manager_id,'open-chat');
       await renderSharing();
       status(matched?'You matched. Open chat to say hello.':'You’re open to chatting. A chat opens when the manager is interested too.');
@@ -688,8 +763,53 @@ async function renderSharing(){
   });
 }
 
+function declineApplicant(person,onSent){
+  dialog('Decline '+person.profile.name+'?',body=>{
+    body.append(node('p','This goes directly to the applicant. Name a job requirement or evidence from their profile that informed your decision, then suggest one step they can take. Use work preferences to start conversations.'));
+    const form=node('form');
+    const makeField=(id,labelText,example)=>{
+      const label=node('label',labelText);
+      label.htmlFor=id;
+      const field=node('textarea');
+      field.id=id;
+      field.required=true;
+      field.minLength=20;
+      field.maxLength=1200;
+      field.rows=3;
+      field.placeholder=example;
+      form.append(label,field);
+      return field;
+    };
+    const reason=makeField('declineReason','What led to your decision?',
+      'This role requires leading live training, and your examples focused on designing the materials.');
+    const nextStep=makeField('declineNextStep','What could they try next?',
+      'Co-lead a training session and add an example of how you adapted it based on learner feedback.');
+    const actions=node('div',undefined,'actions');
+    const send=node('button','Decline & send feedback','button danger');
+    send.type='submit';
+    actions.append(button('Cancel',closeDialog),send);
+    form.append(actions);
+    form.addEventListener('submit',event=>{
+      event.preventDefault();
+      run(send,async()=>{
+        for(const field of [reason,nextStep]){
+          if(Array.from(field.value.trim()).length<20){
+            field.focus();
+            throw new Error('Use at least 20 characters for each response.');
+          }
+        }
+        await api.declineWithFeedback(person.owner_id,reason.value.trim(),nextStep.value.trim());
+        closeDialog();
+        onSent();
+        status('Declined. The applicant can now read your feedback in Forward.');
+      });
+    });
+    body.append(form);
+  });
+}
+
 async function renderApplicantDeck(){
-  heading('APPLICANTS SHARED WITH YOU','Meet the people behind the résumé.','Swipe right for Interested or left to Pass. Applicants can see when you open their full profile. You can revisit passed profiles any time.');
+  heading('APPLICANTS SHARED WITH YOU','Meet the people behind the résumé.','Swipe right for Interested or left to open the decline form. Applicants can see when you open their full profile.');
   const host=$('workspaceContent');
   host.replaceChildren(node('p','Loading applicants…'));
   const [applicants,existing]=await Promise.all([api.applicants(),api.connections()]);
@@ -697,7 +817,7 @@ async function renderApplicantDeck(){
   const decisions=new Map(existing.map(item=>[item.applicant_id,item]));
   const filter=node('select');
   filter.id='applicantFilter';
-  for(const [value,label] of [['new','To review'],['interested','Interested'],['pass','Passed'],['matched','Matched']]){
+  for(const [value,label] of [['new','To review'],['interested','Interested'],['pass','Declined'],['matched','Matched']]){
     filter.append(new Option(label,value));
   }
   const label=node('label','Show applicants');
@@ -739,16 +859,19 @@ async function renderApplicantDeck(){
     card.append(story);
     const actions=node('div',undefined,'actions');
     if(!person.example)actions.append(button('Preview full profile',()=>showSharedApplicant(person.owner_id)));
-    const choose=async choice=>{
-      const matched=await api.chooseConnection(person.owner_id,choice);
+    const markChoice=choice=>{
+      decisions.set(person.owner_id,{manager_choice:choice});
+      draw(true);
+    };
+    const showInterest=async()=>{
+      const matched=await api.chooseConnection(person.owner_id,'interested');
       if(matched){
         await navigate('messages',person.owner_id);
         status('You matched with '+person.profile.name+'. Your private chat is ready.');
         return;
       }
-      decisions.set(person.owner_id,{manager_choice:choice});
-      draw(true);
-      status(choice==='pass'?'Moved to Passed. You can revisit this profile any time.':'Interest saved. A chat opens when the applicant is open to chatting too.');
+      markChoice('interested');
+      status('Interest saved. A chat opens when the applicant is open to chatting too.');
     };
     if(person.example){
       const preview=node('details',undefined,'inline-example');
@@ -758,8 +881,8 @@ async function renderApplicantDeck(){
     }else if(decision?.matched){
       actions.append(button('Open chat',()=>navigate('messages',decision.id),'primary'));
     }else{
-      const pass=decision?.manager_choice==='pass'?null:button('← Pass',()=>choose('pass'));
-      const interested=decision?.manager_choice==='interested'?null:button('Interested →',()=>choose('interested'),'primary');
+      const pass=decision?.manager_choice==='pass'?null:button('← Decline with feedback',()=>declineApplicant(person,()=>markChoice('pass')));
+      const interested=decision?.manager_choice==='interested'?null:button('Interested →',showInterest,'primary');
       if(pass)actions.append(pass);
       if(interested)actions.append(interested);
       let start;
@@ -800,6 +923,83 @@ async function showSharedApplicant(id){
     if(prompts?.length){const list=node('ul');for(const prompt of prompts)list.append(node('li',prompt.question));body.append(list);}else body.append(node('p','What helps each of us do our best work, and what should we agree on before starting?'));
   });
   api.recordProfileView(id).catch(()=>{});
+}
+
+async function renderFeedback(){
+  const epoch=sessionEpoch;
+  heading('HIRING UPDATES','Feedback','Read private feedback and role updates from hiring teams.');
+  const host=$('workspaceContent');
+  const list=node('div',undefined,'feedback-inbox');
+  const info=node('p','Loading updates…','help');
+  info.setAttribute('role','status');
+  const older=button('Load older updates',()=>loadPage(lastId));
+  older.hidden=true;
+  let lastId;
+  host.replaceChildren(button('Refresh updates',renderFeedback),info,list,older);
+
+  async function loadPage(before){
+    try{
+      const rows=await api.feedback(before);
+      if(epoch!==sessionEpoch||route!=='feedback'||!list.isConnected)return;
+      info.textContent=rows.length||before!==undefined?'':'No updates yet. Hiring feedback and role closures will appear here.';
+      for(const row of rows){
+        const card=node('article',undefined,'panel');
+        const role=[row.role_title,row.company].filter(Boolean).join(' · ');
+        const time=node('time',new Date(row.created_at).toLocaleString());
+        time.dateTime=row.created_at;
+        card.append(node('h2',row.kind==='role_closed'?'Role closed':'Application update'),
+          node('p',role,'card-meta'),time);
+        if(row.kind==='role_closed'){
+          card.append(node('p','The hiring team closed this opening. You can manage résumé access in Sharing.'));
+        }else{
+          card.append(node('h3','What informed the decision'),node('p',row.reason,'profile-text'),
+            node('h3','A suggested next step'),node('p',row.next_step,'profile-text'));
+        }
+        list.append(card);
+      }
+      lastId=rows.at(-1)?.id;
+      older.hidden=rows.length<30;
+    }catch{
+      if(list.isConnected)info.textContent='Forward couldn’t load updates. Choose Refresh updates to try again.';
+    }
+  }
+  await loadPage();
+}
+
+function watchFeedback(){
+  if(account.role!=='applicant')return;
+  const epoch=sessionEpoch;
+  let latest;
+  const showUpdate=()=>{
+    if(epoch!==sessionEpoch)return;
+    if(route==='feedback')void renderFeedback();
+    else $('feedbackNotice').hidden=false;
+  };
+  const checkLatest=async()=>{
+    if(epoch!==sessionEpoch||document.hidden)return;
+    try{
+      const [row]=await api.feedback(undefined,1);
+      if(epoch!==sessionEpoch)return;
+      const id=row?.id||0;
+      if(latest!==undefined&&id>latest)showUpdate();
+      latest=Math.max(latest||0,id);
+    }catch{/* The inbox exposes retry when opened. */}
+  };
+  const channel=client.channel('forward-hiring-updates').on('postgres_changes',{
+    event:'INSERT',schema:'public',table:'forward_decline_feedback',filter:'applicant_id=eq.'+user.id
+  },({new:row})=>{
+    latest=Math.max(latest||0,row.id);
+    showUpdate();
+  }).subscribe(state=>{if(state==='SUBSCRIBED')void checkLatest();});
+  document.addEventListener('visibilitychange',checkLatest);
+  const fallback=setInterval(checkLatest,20000);
+  void checkLatest();
+  stopFeedback=()=>{
+    clearInterval(fallback);
+    document.removeEventListener('visibilitychange',checkLatest);
+    void client.removeChannel(channel);
+    $('feedbackNotice').hidden=true;
+  };
 }
 
 async function renderMessages(selection){
@@ -868,8 +1068,15 @@ async function openConversation(host,chat){
     list.scrollTop=previousTop+list.scrollHeight-previousHeight;
   });
   older.hidden=true;
-  panel.append(node('h2',chat.name),older,empty,list,info,form);
+  const starter=node('aside',undefined,'notice chat-starter');
+  starter.hidden=true;
+  panel.append(node('h2',chat.name),starter,older,empty,list,info,form);
   host.append(panel);
+  api.chatStarter(chat.id).then(question=>{
+    if(!active||!question)return;
+    starter.append(node('h3','A question to start with'),node('p',question));
+    starter.hidden=false;
+  }).catch(()=>{});
 
   function draw(rows,scrollToLatest=false){
     if(!rows.some(message=>!rendered.has(message.id)))return;
@@ -949,6 +1156,7 @@ function setAuthMode(mode){
 }
 async function handleSession(session,event){
   stopChat();
+  stopFeedback();
   const epoch=++sessionEpoch;
   if(user&&session?.user?.id!==user.id){location.replace('accounts.html');return;}
   user=session?.user||null;
@@ -969,7 +1177,7 @@ async function handleSession(session,event){
   if(event==='PASSWORD_RECOVERY'||recovery){recovery=true;showPage('recoveryPage');return;}
   const found=await api.account(user.id);if(epoch!==sessionEpoch)return;account=found;
   if(!account){showPage('rolePage');return;}
-  if(!await loadOwned())return;step=draft.resumeId?1:0;route='profile';renderNav();renderEditor();
+  if(!await loadOwned())return;step=draft.resumeId?1:0;route='profile';renderNav();renderEditor();watchFeedback();
 }
 async function initialize(){
   if(!configReady(accountConfig)){showPage('setupNotice');return;}
@@ -1024,7 +1232,8 @@ async function initialize(){
       status('Your password has been updated.');
     });
   });
-  document.querySelectorAll('[data-account-role]').forEach(b=>b.addEventListener('click',()=>run(b,async()=>{account=await api.register(b.dataset.accountRole);await loadOwned();step=0;route='profile';renderNav();renderEditor();status('Your account is ready. Start with your work preferences.');})));
+  $('openFeedback').addEventListener('click',()=>run($('openFeedback'),()=>navigate('feedback')));
+  document.querySelectorAll('[data-account-role]').forEach(b=>b.addEventListener('click',()=>run(b,async()=>{account=await api.register(b.dataset.accountRole);await loadOwned();step=0;route='profile';renderNav();renderEditor();watchFeedback();status('Your account is ready. Start with your work preferences.');})));
   client.auth.onAuthStateChange((event,session)=>{
     if(event==='TOKEN_REFRESHED')return;
     if(event==='PASSWORD_RECOVERY')recovery=true;

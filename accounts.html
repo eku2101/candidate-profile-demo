@@ -4,19 +4,20 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="referrer" content="no-referrer" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; connect-src 'self' https://*.supabase.co; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
   <title>Forward — Your account</title>
-  <link rel="stylesheet" href="accounts/accounts.css?v=vera-portrait-1" />
+  <link rel="stylesheet" href="accounts/accounts.css?v=hiring-feedback-1" />
   <script src="profile-model.js" defer></script>
   <script src="team-model.js" defer></script>
   <script src="resume-tools.js?v=resume-feedback-1" defer></script>
-  <script type="module" src="accounts/app.mjs?v=vera-portrait-1"></script>
+  <script type="module" src="accounts/app.mjs?v=hiring-feedback-1"></script>
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
   <header class="site-header"><a href="index.html" class="brand">Forward<span>↗</span></a><nav id="accountNav" aria-label="Account navigation" hidden></nav><div id="accountIdentity"><a href="index.html">Explore the demo</a></div><button id="openForwardHelp" class="button secondary forward-help-launch" type="button" aria-haspopup="dialog">Ask Vera</button></header>
   <main id="main">
     <div id="status" class="status" role="status" aria-live="polite"></div>
+    <div id="feedbackNotice" class="notice actions" hidden><span role="status">You have a new hiring update.</span><button id="openFeedback" class="button secondary" type="button">Read update</button></div>
     <p id="accountPreview" class="notice" hidden>Account preview · Please help us check signup and email confirmation before the wider launch.</p>
     <section id="setupNotice" class="panel" hidden><p class="eyebrow">ACCOUNTS ARE BEING CONNECTED</p><h1>A shared future is on its way.</h1><p>Account access is not available yet. The existing demo is still available, and its saved profiles remain in this browser.</p><a href="index.html" class="button">Return to Forward</a></section>
     <section id="authPage" class="auth-layout" hidden>

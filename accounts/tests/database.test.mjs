@@ -11,7 +11,20 @@ const hiring=()=>({fields:{managerName:'Morgan',managerTitle:'Manager',company:'
 async function as(id,sql,args=[]) {await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[id||'']);await db.exec('set role '+(id?'authenticated':'anon'));return db.query(sql,args);}
 async function rpc(id,name,args=[],casts=[]) {return as(id,`select public.${name}(${args.map((_,i)=>'$'+(i+1)+(casts[i]?'::'+casts[i]:'')).join(',')}) as result`,args);}
 async function setupApplicant(id=a) {await rpc(id,'forward_register',['applicant']);await rpc(id,'forward_save_draft',[JSON.stringify(applicant()),0],['jsonb','integer']);await rpc(id,'forward_publish_applicant',[1]);}
-async function setupManager(id=m) {await rpc(id,'forward_register',['hiring']);await rpc(id,'forward_save_draft',[JSON.stringify(hiring()),0],['jsonb','integer']);await rpc(id,'forward_publish_hiring',[1]);}
+async function requestEmployer(id=m) {
+  await rpc(id,'forward_register',['hiring']);
+  await rpc(id,'forward_save_draft',[JSON.stringify(hiring()),0],['jsonb','integer']);
+  await rpc(id,'forward_request_employer_verification',['https://example.org']);
+}
+async function approveEmployer(id=m) {
+  await db.exec('reset role');
+  await db.query("update forward_private.forward_employer_verification set status='approved' where manager_id=$1",[id]);
+}
+async function setupManager(id=m) {
+  await requestEmployer(id);
+  await approveEmployer(id);
+  await rpc(id,'forward_publish_hiring',[1]);
+}
 before(async()=>{
   await db.exec(`create schema auth;create schema storage;
     create role anon;create role authenticated;create role service_role bypassrls;
@@ -84,6 +97,71 @@ test('only a specifically chosen manager gets a shared snapshot, and withdrawal 
   await assert.rejects(()=>as(n,'insert into public.forward_shares values($1,$2,now())',[a,n]),/permission denied/);
   await rpc(a,'forward_withdraw',[m]);
   assert.equal((await as(m,'select * from public.forward_applicant_publications')).rows.length,0);
+});
+test('decline and feedback are atomic, private, and safe to retry',async()=>{
+  await setupApplicant();await setupApplicant(b);await setupManager();await setupManager(n);
+  await rpc(a,'forward_share',[m,1]);
+  const reason='This role needs examples of leading live training.';
+  const next='Try co-leading a workshop and document what you changed.';
+  const decline=(actor,target,why=reason)=>rpc(actor,'forward_decline_with_feedback',[target,why,next]);
+  await assert.rejects(()=>decline(m,a,'Too short'),/20 to 1,200/);
+  await assert.rejects(()=>decline(n,a),/no longer shared/);
+  await assert.rejects(()=>decline(a,b),/Only a hiring manager/);
+  assert.equal((await as(m,'select * from public.forward_connections()')).rows.length,0);
+  await decline(m,a);
+  await decline(m,a);
+  const rows=actor=>as(actor,'select * from public.forward_decline_feedback');
+  const feedback=(await rows(a)).rows;
+  assert.equal(feedback.length,1);
+  assert.equal(feedback[0].reason,reason);
+  assert.equal(feedback[0].next_step,next);
+  assert.equal(feedback[0].company,'Example team');
+  assert.equal((await as(a,'select manager_choice from public.forward_connections()')).rows[0].manager_choice,'pass');
+  assert.equal((await rows(b)).rows.length,0);
+  assert.equal((await rows(m)).rows.length,0);
+  await assert.rejects(()=>rows(null),/permission denied/);
+  await rpc(a,'forward_withdraw',[m]);
+  assert.equal((await rows(a)).rows.length,1);
+  await assert.rejects(()=>decline(m,a),/no longer shared/);
+});
+test('posting requires employer approval, stale openings can be renewed, and closing sends a private update once',async()=>{
+  await setupApplicant();await setupApplicant(b);await requestEmployer();
+  await assert.rejects(()=>rpc(m,'forward_publish_hiring',[1]),/must verify/);
+  await assert.rejects(()=>as(m,"update forward_private.forward_employer_verification set status='approved'"),/permission denied/);
+  await approveEmployer();
+  await rpc(m,'forward_publish_hiring',[1]);
+  await rpc(a,'forward_share',[m,1]);
+  await db.exec('reset role');
+  await db.query("update public.forward_hiring_publications set updated_at=now()-interval '31 days' where owner_id=$1",[m]);
+  assert.equal((await as(a,'select * from public.forward_open_roles()')).rows.length,0);
+  await assert.rejects(()=>rpc(b,'forward_share',[m,1]),/awaiting confirmation/);
+  await rpc(m,'forward_publish_hiring',[1]);
+  assert.equal((await as(a,'select * from public.forward_open_roles()')).rows.length,1);
+  await rpc(m,'forward_unpublish');
+  await rpc(m,'forward_unpublish');
+  const feedback=(await as(a,'select kind, role_title from public.forward_decline_feedback')).rows;
+  assert.deepEqual(feedback,[{kind:'role_closed',role_title:'Coordinator'}]);
+  assert.equal((await as(b,'select * from public.forward_decline_feedback')).rows.length,0);
+  await assert.rejects(()=>rpc(b,'forward_share',[m,1]),/role is closed/);
+  assert.equal((await as(a,'select * from public.forward_shares')).rows.length,1,'applicant still controls résumé access');
+});
+test('a conversation starter uses preferences only after a mutual match',async()=>{
+  await setupApplicant();await setupApplicant(b);await setupManager();
+  const team=hiring();
+  team.answers.communication='live';
+  await rpc(m,'forward_save_draft',[JSON.stringify(team),1],['jsonb','integer']);
+  await rpc(m,'forward_publish_hiring',[2]);
+  await rpc(a,'forward_share',[m,1]);
+  await rpc(m,'forward_choose_connection',[a,'interested']);
+  const {id}=(await as(m,'select * from public.forward_connections()')).rows[0];
+  const question=async actor=>(await rpc(actor,'forward_chat_starter',[id])).rows[0].result;
+  assert.equal(await question(m),null);
+  await rpc(a,'forward_choose_connection',[m,'open-chat']);
+  assert.match(await question(a),/writing.*quick conversation/);
+  assert.equal(await question(m),await question(a));
+  assert.equal(await question(b),null);
+  await assert.rejects(()=>rpc(m,'forward_decline_with_feedback',[a,
+    'This role needs examples of live training.','Try leading a workshop and document the outcome.']),/already matched/);
 });
 test('profile views are private, deduplicated, and respect who may open a profile',async()=>{
   await setupApplicant();
