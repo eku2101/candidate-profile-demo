@@ -1,6 +1,6 @@
 import {test,before,after,beforeEach} from 'node:test';
 import assert from 'node:assert/strict';
-import {readFile} from 'node:fs/promises';
+import {readFile,readdir} from 'node:fs/promises';
 import {PGlite} from '@electric-sql/pglite';
 import {normalizeApplicant} from '../model.mjs';
 const db=new PGlite();
@@ -19,7 +19,8 @@ before(async()=>{
     create table auth.users(id uuid primary key,email_confirmed_at timestamptz);
     create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
     create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);`);
-  await db.exec(await readFile(new URL('../../supabase/migrations/202611120001_forward_accounts.sql',import.meta.url),'utf8'));
+  const migrations=new URL('../../supabase/migrations/',import.meta.url);
+  for(const file of (await readdir(migrations)).filter(name=>name.endsWith('.sql')).sort())await db.exec(await readFile(new URL(file,migrations),'utf8'));
 });
 beforeEach(async()=>{await db.exec('reset role;truncate auth.users cascade');for(const id of [a,b,m,n])await db.query('insert into auth.users values($1,now())',[id]);});
 after(()=>db.close());
@@ -59,7 +60,7 @@ test('draft edits do not change shared content until explicitly published',async
 test('a stale device cannot overwrite a newer saved profile',async()=>{
   await setupApplicant();const changed=applicant();changed.fields.name='Updated Name';
   await rpc(a,'forward_save_draft',[JSON.stringify(changed),1],['jsonb','integer']);
-  await assert.rejects(()=>rpc(a,'forward_save_draft',[JSON.stringify(applicant()),1],['jsonb','integer']),/another device/);
+  await assert.rejects(()=>rpc(a,'forward_save_draft',[JSON.stringify(applicant()),1],['jsonb','integer']),error=>error.code==='PT409'&&/another device/.test(error.message));
   assert.equal((await as(a,'select document from public.forward_applicant_drafts')).rows[0].document.fields.name,'Updated Name');
 });
 test('the server rejects incomplete profiles, missing answers, and over-limit public text',async()=>{
