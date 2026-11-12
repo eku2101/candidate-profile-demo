@@ -49,6 +49,13 @@
 #forwardHelpQuestion { min-height: 62px; }
 .help-chat-actions { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
 .help-chat-actions p { margin: 0; }
+.feedback-inbox { margin-top: 16px; max-width: 760px; }
+.feedback-inbox time { display: block; margin-bottom: 12px; color: var(--muted); font-size: .8rem; }
+.feedback-inbox h2 { margin-bottom: 8px; }
+.feedback-inbox .card-meta { margin-bottom: 4px; }
+.chat-starter { margin: 0 0 12px; }
+.chat-starter p:last-child { margin: 0; }
+@media (max-width:800px) { #accountNav { flex-wrap: wrap; } }
 .deck-toolbar label { margin: 0; }
 .deck-toolbar select { width: auto; min-width: 140px; }
 .applicant-deck { max-width: 720px; }

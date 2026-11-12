@@ -17,13 +17,37 @@ This branch implements a separate account workspace at `accounts.html` while pre
 - An account chooses one role after confirming its email. A browser-supplied ID or mutable auth metadata cannot choose another person’s role or records.
 - Applicant and manager drafts are separate from sharing snapshots. Saving a draft does not expose its edits. Applicants explicitly save a sharing version, choose a published manager, review the recipient, and grant access. Existing grants receive later explicitly published versions.
 - Separate contact fields and applicant questionnaire answers are omitted by the server from the shared snapshot. The original résumé can contain contact details; the sharing confirmation explains that it is included.
-- Applicants see manager profiles and all team answers. Preference differences generate questions and never exclude or rank someone. Manager descriptions and jobs are self-reported, not independently verified.
+- Applicants see current openings from approved employers and their published team answers. Preference differences generate questions, including one conversation starter in a mutual-match chat. They never exclude or rank someone.
 - Shared managers receive discussion prompts derived from the applicant’s last explicitly published preference snapshot. They cannot read that snapshot or the applicant’s private answers. Later private edits do not change those prompts until republished. Withdrawal also blocks the prompt endpoint.
 - Files are validated for type signatures and a 10 MB limit, then stored privately. The authenticated download function checks row-level access on every new download; managers cannot mint permanent storage links. Withdrawal cannot retrieve previously downloaded copies. This implementation does not provide malware scanning.
 - Existing demo profiles remain local unless someone explicitly reviews and imports them into their account. The import copies profile fields, work preferences, highlights, and the résumé, but not the demo photo or session-only messages. Account sessions are stored in sessionStorage; changing accounts clears the workspace. Passwords are never stored by application code.
 - Concurrent draft saves use a version check. A stale device receives an error instead of overwriting a newer draft. The user can reload the saved version after reviewing the warning.
 - There is a limit of ten stored résumé files per applicant. Unused files can be removed from the document manager. The database prevents deleting a file used by a published profile. Storage deletion failures can leave inaccessible orphaned objects; operators should reconcile those with document metadata.
-- This first account version does not implement employer verification, messaging, application tracking, automated assessments, payments, or account deletion. It does provide real profiles and controlled résumé sharing once activated.
+- Declines and explicit role closures produce private in-app updates. Closing a role leaves existing sharing permissions under the applicant’s control. Delivered feedback remains in the applicant’s inbox if they later withdraw access.
+
+## Review employer verification requests
+
+Hiring managers request verification from **My hiring profile → Review & publish**. In the Forward project’s SQL Editor, review the pending queue:
+
+```sql
+select v.manager_id, v.company, v.website, u.email, v.requested_at
+from forward_private.forward_employer_verification v
+join auth.users u on u.id = v.manager_id
+where v.status = 'pending'
+order by v.requested_at;
+```
+
+Confirm the organization and the manager’s authorization to recruit through an independently sourced employer contact. A submitted website or a matching email domain alone does not establish authorization. Record the decision against the exact request you reviewed so a changed request cannot inherit the approval:
+
+```sql
+update forward_private.forward_employer_verification
+set status = 'approved'
+where manager_id = '<manager_id>'
+  and requested_at = '<requested_at>'
+  and status = 'pending';
+```
+
+Use `rejected` if the request cannot be verified. Managers can check the status in their account. Approval covers that manager and company name. New or existing openings only appear in Discover teams after approval, and the manager must confirm the role every 30 days. The decision queue is private to project operators.
 
 ## Tests
 
