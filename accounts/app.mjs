@@ -228,20 +228,24 @@ function renderEditor(){
     panel.append(node('p',account.role==='applicant'?'Your selected answers stay private. Managers you share with receive discussion questions about differences, without seeing your selected answers. You can compare your answers with a manager’s published answers when exploring a team.':'These team answers will be included when you publish your manager profile.','notice'));
     panel.append(questionForm(account.role==='applicant'?draft.preferences:draft.answers,account.role==='hiring'));
   }else if(account.role==='hiring'&&step===1){
-    renderImageEditor(panel);
-    panel.append(fieldsGrid(ForwardTeams.fields,draft.fields,changed,'manager-'));
+    const managerFields=Object.entries(ForwardTeams.fields);
+    const identity=managerFields.filter(([key])=>!['teamStory','roleTitle','employmentType','roleSummary'].includes(key));
+    const listing=managerFields.filter(([key])=>['teamStory','roleTitle','employmentType','roleSummary'].includes(key));
+    panel.append(node('h3','About the manager'),fieldsGrid(Object.fromEntries(identity),draft.fields,changed,'manager-'));
     const background=node('details');
     background.open=Object.keys(hiringBackgroundFields).some(key=>draft.fields[key]);
     background.append(node('summary','Professional background'),fieldsGrid(hiringBackgroundFields,draft.fields,changed,'manager-'));
     panel.append(background);
+    renderImageEditor(panel);
+    panel.append(node('h3','Role and team'),fieldsGrid(Object.fromEntries(listing),draft.fields,changed,'manager-'));
   }
   else if(account.role==='applicant'&&step===1){
-    renderImageEditor(panel);
     panel.append(fieldsGrid(Object.fromEntries(Object.entries(applicantFields).slice(0,7)),draft.fields,changed,'applicant-'));
     const history=node('details');
     history.open=Boolean(draft.fields.experience||draft.fields.education||draft.fields.credentials);
     history.append(node('summary','Full work history, education & achievements'),fieldsGrid(Object.fromEntries(Object.entries(applicantFields).slice(7,10)),draft.fields,changed,'history-'));
     panel.append(history);
+    renderImageEditor(panel);
   }else if(account.role==='applicant'&&step===2){
     panel.append(node('p','Feature up to three roles that best show your growth, contribution, and impact. You can edit your full work history under About you.'));
     const suggestions=ForwardProfile.suggestRoles(draft.fields.experience);
@@ -419,7 +423,7 @@ function renderResumeUpload(panel){
   const attached=currentFile();
   if(attached){
     upload.append(node('p','Saved résumé: '+attached.name,'help'));
-    if(step===0)upload.append(button('Review my profile details',()=>{step=1;renderEditor();}));
+    if(step===0)upload.append(button('See your saved résumé details',showResumeDetails,'primary'));
   }
   if(step===1){
     const options=node('details');
@@ -440,6 +444,14 @@ function renderResumeUpload(panel){
 
 function readResumeForRole(result){
   return account.role==='hiring'?{...result,fields:hiringResumeFields(result.fields)}:result;
+}
+
+function showResumeDetails(){
+  step=1;
+  renderEditor();
+  const firstField=$(account.role==='hiring'?'manager-managerName':'applicant-name');
+  firstField.focus({preventScroll:true});
+  firstField.scrollIntoView({block:'center'});
 }
 
 async function reviewResume(file){
@@ -467,8 +479,8 @@ async function reviewResume(file){
     status(error.message,true);
     return;
   }
-  renderEditor();
-  status(result.warnings.length?'Résumé saved and available details filled in. Review your profile for anything the PDF reader missed.':'Résumé uploaded. Your profile details and work history are filled in and saved.');
+  showResumeDetails();
+  status(result.warnings.length?'Résumé saved. Review the details Forward found and add anything missing.':'Résumé saved. Your imported details are ready to review below.');
 }
 
 function createResumeSaver(file){
@@ -505,18 +517,18 @@ function reviewImport(result,file,wholeProfile=null,save=createResumeSaver(file)
     : Object.fromEntries(Object.entries(applicantFields).slice(0,10));
   const reviewed=Object.fromEntries(Object.keys(definitions).map(key=>[key,result.fields[key]||'']));
   dialog('Review your résumé details',body=>{
-    body.append(node('p',wholeProfile?'Review this browser’s saved information before copying it to your signed-in account. This replaces the current account draft fields and preferences. Photos are not copied.':'Check the extracted details before saving. Filled fields replace the corresponding values in your draft.'));
+    body.append(node('p',wholeProfile?'Review the information before copying it to your account. This replaces the current draft fields and preferences.':'Review the information before saving it to your private draft. Filled fields replace the corresponding values in your draft.'));
     for(const warning of result.warnings||[])body.append(node('p',warning,'notice'));
     body.append(fieldsGrid(definitions,reviewed,()=>{},'import-'));
-    const check=node('input');check.type='checkbox';check.id='ownResumeConfirmation';const label=node('label');label.append(check,document.createTextNode('This information is mine. '+(file?`Upload ${file.name} to my private account.`:'Save these details to my private account.')));body.append(label);
-    body.append(button('Save résumé to my account',async()=>{
-      if(!check.checked){check.focus();throw new Error('Confirm that this is your information before importing.');}
+    if(file)body.append(node('p','File to save privately: '+file.name,'help'));
+    const actions=node('div',undefined,'resume-import-actions');
+    actions.append(button('Save and open my profile',async()=>{
       await save(reviewed,wholeProfile);
       closeDialog();
-      if(step!==0)step=1;
-      renderEditor();
+      showResumeDetails();
       status(Object.values(reviewed).some(value=>value.trim())?'Résumé details filled in and saved. Review your profile for any missing information.':'Résumé attached to your private draft.');
     },'primary'));
+    body.append(actions);
   });
 }
 async function importBrowserDraft(){
@@ -628,6 +640,7 @@ async function renderApplicantDeck(){
   const host=$('workspaceContent');
   host.replaceChildren(node('p','Loading applicants…'));
   const [applicants,existing]=await Promise.all([api.applicants(),api.connections()]);
+  const examples=exampleApplicants.map(profile=>({profile,example:true}));
   const decisions=new Map(existing.map(item=>[item.applicant_id,item]));
   const filter=node('select');
   filter.id='applicantFilter';
@@ -637,7 +650,7 @@ async function renderApplicantDeck(){
   const label=node('label','Show applicants');
   label.htmlFor=filter.id;
   const toolbar=node('div',undefined,'deck-toolbar');
-  toolbar.append(label,filter,button('Refresh applicants',renderApplicantDeck),button('See applicant examples',()=>showExampleProfiles('applicant')));
+  toolbar.append(label,filter,button('Refresh applicants',renderApplicantDeck));
   const content=node('div',undefined,'applicant-deck');
   host.replaceChildren(toolbar,content);
   let index=0;
@@ -647,6 +660,8 @@ async function renderApplicantDeck(){
       const decision=decisions.get(person.owner_id);
       return (decision?.matched?'matched':decision?.manager_choice||'new')===filter.value;
     });
+    if(filter.value==='new')list.splice(0,0,examples[0]);
+    if(filter.value==='new')list.push(...examples.slice(1));
     index=Math.min(index,Math.max(0,list.length-1));
     const person=list[index];
     if(!person){
@@ -659,6 +674,7 @@ async function renderApplicantDeck(){
     const decision=decisions.get(person.owner_id);
     const card=node('article',undefined,'panel applicant-card');
     const story=node('div',undefined,'swipe-area');
+    if(person.example)story.append(node('strong','FAKE','fake-label'));
     const title=node('h2',person.profile.name);
     title.tabIndex=-1;
     const initials=person.profile.name.trim().split(/\s+/).slice(0,2).map(word=>Array.from(word)[0]).join('').toUpperCase();
@@ -669,7 +685,7 @@ async function renderApplicantDeck(){
     if(highlights.length)story.append(node('p',highlights.join(' · '),'help'));
     card.append(story);
     const actions=node('div',undefined,'actions');
-    actions.append(button('Preview full profile',()=>showSharedApplicant(person.owner_id)));
+    if(!person.example)actions.append(button('Preview full profile',()=>showSharedApplicant(person.owner_id)));
     const choose=async choice=>{
       const matched=await api.chooseConnection(person.owner_id,choice);
       if(matched){
@@ -681,7 +697,12 @@ async function renderApplicantDeck(){
       draw(true);
       status(choice==='pass'?'Moved to Passed. You can revisit this profile any time.':'Interest saved. A chat opens when the applicant is open to chatting too.');
     };
-    if(decision?.matched){
+    if(person.example){
+      const preview=node('details',undefined,'inline-example');
+      preview.append(node('summary','Read the example profile'),node('p','Use this fictional profile as a reference.','help'));
+      renderApplicantStory(preview,person.profile);
+      card.append(preview);
+    }else if(decision?.matched){
       actions.append(button('Open chat',()=>navigate('messages',decision.id),'primary'));
     }else{
       const pass=decision?.manager_choice==='pass'?null:button('← Pass',()=>choose('pass'));
@@ -703,7 +724,7 @@ async function renderApplicantDeck(){
         (dx>0?interested:pass)?.click();
       });
     }
-    card.append(actions);
+    if(!person.example)card.append(actions);
     const paging=node('div',undefined,'deck-paging');
     if(index>0)paging.append(button('← Previous',()=>{index--;draw(true);}));
     paging.append(node('p',`${index+1} of ${list.length}`,'help'));
