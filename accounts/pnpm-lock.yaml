@@ -9,14 +9,14 @@ importers:
   .:
     dependencies:
       '@supabase/supabase-js':
-        specifier: ^2.102.0
+        specifier: 2.119.0
         version: 2.119.0
     devDependencies:
       '@electric-sql/pglite':
-        specifier: ^0.3.0
+        specifier: 0.3.16
         version: 0.3.16
       esbuild:
-        specifier: ^0.25.0
+        specifier: 0.25.12
         version: 0.25.12
 
 packages:

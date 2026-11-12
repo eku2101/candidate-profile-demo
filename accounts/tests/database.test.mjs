@@ -99,10 +99,21 @@ test('only a chosen manager gets discussion prompts, never private answers or la
   await rpc(m,'forward_save_draft',[JSON.stringify(team),1],['jsonb','integer']);await rpc(m,'forward_publish_hiring',[2]);
   await rpc(a,'forward_share',[m,1]);
   const prompts=(await rpc(m,'forward_conversation_prompts',[a])).rows[0].result;assert.equal(prompts.length,1);assert.equal(prompts[0].topic,'communication');assert.equal('answer' in prompts[0],false);
-  await assert.rejects(()=>as(m,'select * from public.forward_applicant_preferences'),/permission denied/);
+  await assert.rejects(()=>as(m,'select * from forward_private.forward_applicant_preferences'),/permission denied/);
   await assert.rejects(()=>rpc(n,'forward_conversation_prompts',[a]),/not shared/);
   const next=applicant();next.preferences.communication='live';await rpc(a,'forward_save_draft',[JSON.stringify(next),1],['jsonb','integer']);
   assert.equal((await rpc(m,'forward_conversation_prompts',[a])).rows[0].result.length,1,'unpublished preference edits stay private');
   await rpc(a,'forward_publish_applicant',[2]);assert.equal((await rpc(m,'forward_conversation_prompts',[a])).rows[0].result.length,0);
   await rpc(a,'forward_withdraw',[m]);await assert.rejects(()=>rpc(m,'forward_conversation_prompts',[a]),/not shared/);
+});
+
+test('privileged routines and private answers stay outside the exposed schema',async()=>{
+  await db.exec('reset role');
+  const exposed=await db.query("select p.proname from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.prosecdef");
+  assert.equal(exposed.rows.length,0);
+  assert.equal((await db.query("select has_schema_privilege('anon','forward_private','usage') as allowed")).rows[0].allowed,false);
+  assert.equal((await db.query("select has_function_privilege('authenticated','forward_private.forward_words(text)','execute') as allowed")).rows[0].allowed,false);
+  await setupApplicant();
+  await assert.rejects(()=>as(a,'select * from forward_private.forward_applicant_preferences'),/permission denied/);
+  await assert.rejects(()=>as(null,"select forward_private.forward_register('applicant')"),/permission denied/);
 });
