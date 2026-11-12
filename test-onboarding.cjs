@@ -18,7 +18,7 @@ function harness() {
   const calls = [];
   const context = vm.createContext({ document:{activeElement:node(),body:node()},$:id=>nodes[id],
     applicantQuizComplete:false,hiringQuizComplete:false,applicantLaunched:false,forwardPage:'home',
-    applicantPreferences:{},hiringCriteria:{},renderForwardHome(){},renderApplicantPrivacyStatus(){},renderRoleBrief(){},
+    applicantPreferences:{},hiringCriteria:{},renderForwardHome(){},renderApplicantPrivacyStatus(){},renderRoleBrief(){},hasPublishedTeam(){return false;},
     showRoleChooser(){calls.push('roles');},navigateForward(page){calls.push(page);},showApplicantPage(page){calls.push(page);},showBuilderStep(step){calls.push(step);},renderApplicantCard(){} });
   vm.runInContext(source,context);
   const run = code => vm.runInContext(code,context);
@@ -92,13 +92,13 @@ test('completed answers can be submitted and reopening discards unsaved preferen
   assert.equal(answers.focus,'protected');
 });
 
-test('finishing onboarding routes new applicants to the first builder step and employers to discovery', () => {
+test('finishing onboarding routes applicants to their builder and new employers to their profile', () => {
   const h=harness();
   h.run("openWorkOnboarding('applicant',true);finishWorkOnboarding('applicant')");
   assert.deepEqual(h.calls,['builder',0]);
   assert.equal(h.nodes.siteShell.inert,false);
   h.run("openWorkOnboarding('hiring',true);finishWorkOnboarding('hiring')");
-  assert.equal(h.calls.at(-1),'discover');
+  assert.equal(h.calls.at(-1),'profile');
 });
 
 test('leaving unfinished onboarding returns to role selection and editing preserves the current page', () => {

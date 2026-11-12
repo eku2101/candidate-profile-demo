@@ -8,11 +8,6 @@ let introPlaybackPaused = false;
 let welcomeTimer = null;
 let welcomeReady = false;
 const builderSteps = ['About you', 'Your top three', 'Values & teamwork', 'Work preferences', 'Review & launch'];
-const sampleTeams = [
-  { name: 'A design studio', kind: 'Sample team · Creative work', copy: 'Small teams turning ideas into thoughtful experiences.', focus: 'protected', brainstorming: 'frequent', communication: 'written', checkIns: 'milestones', rhythm: 'flexible', environment: 'small' },
-  { name: 'A community organization', kind: 'Sample team · Community work', copy: 'People building relationships and supporting local programs.', focus: 'open', brainstorming: 'occasional', communication: 'live', checkIns: 'frequent', rhythm: 'steady', environment: 'mid' },
-  { name: 'A distributed team', kind: 'Sample team · Operations', copy: 'Colleagues improving everyday work across locations.', focus: 'protected', brainstorming: 'occasional', communication: 'written', checkIns: 'milestones', rhythm: 'fast', environment: 'remote' }
-];
 function makeElement(tag, className, text) {
   const node = document.createElement(tag);
   if (className) node.className = className;
@@ -33,7 +28,7 @@ function setNavigation(page) {
   });
 }
 function hideForwardPages() {
-  ['applicantWorkspace', 'applicantLivePage', 'applicantCommunityPage', 'hiringWorkspace', 'forwardHome', 'teamDiscovery', 'forwardConnections', 'forwardMessages'].forEach(id => {
+  ['applicantWorkspace', 'applicantLivePage', 'applicantCommunityPage', 'hiringWorkspace', 'forwardHome', 'teamDiscovery', 'teamDetailPage', 'hiringProfilePage', 'forwardConnections', 'forwardMessages'].forEach(id => {
     if ($(id)) $(id).hidden = true;
   });
 }
@@ -49,18 +44,19 @@ function navigateForward(page) {
     $('forwardHome').hidden = false;
     renderForwardHome();
   } else if (page === 'profile') {
-    if (activeRole === 'hiring') { openHiringQuiz(); $('forwardHome').hidden = false; renderForwardHome(); }
+    if (activeRole === 'hiring') { $('hiringProfilePage').hidden = false; renderHiringProfileStatus(); }
     else showApplicantPage(applicantLaunched && profileWithinLimits() ? 'hub' : 'builder');
   } else if (page === 'discover') {
     if (activeRole === 'hiring') {
       if (!hiringQuizComplete) { openHiringQuiz(); $('forwardHome').hidden = false; renderForwardHome(); }
       else { $('hiringWorkspace').hidden = false; rankRemainingApplicants(); renderApplicantCard(); renderRoleBrief(); }
-    } else { $('teamDiscovery').hidden = false; }
+    } else { $('teamDiscovery').hidden = false; renderJobDiscovery(); }
   } else if (page === 'connections') {
     $('forwardConnections').hidden = false;
     $('yesList').previousElementSibling.textContent = activeRole === 'applicant' ? 'Teams interested in your story' : 'People you want to meet';
     $('feedbackList').previousElementSibling.textContent = activeRole === 'applicant' ? 'Notes shared with you' : 'Saved review notes';
     renderYesList(); renderFeedback();
+    renderTeamConnections();
   } else if (page === 'messages') {
     $('forwardMessages').hidden = false;
     renderMessageInbox();
@@ -80,6 +76,7 @@ function renderForwardHome() {
   $('homeProgress').value = complete.filter(Boolean).length;
   $('homeProgress').hidden = activeRole === 'hiring';
   renderHomeQuestionnaire();
+  if ($('homeExploreJobs')) $('homeExploreJobs').hidden = activeRole !== 'applicant';
 }
 function renderMessageInbox() {
   const host = $('forwardInbox');
@@ -92,7 +89,7 @@ function renderMessageInbox() {
   visible.forEach(connection => {
     const button = makeElement('button', 'inbox-row');
     button.type = 'button';
-    button.append(makeElement('strong', '', activeRole === 'applicant' ? 'Hiring team conversation' : connection.person.name), makeElement('span', '', connection.messages.at(-1)?.text || 'Start a conversation'));
+    button.append(makeElement('strong', '', activeRole === 'applicant' ? (hasPublishedTeam() ? hiringProfileState.published.managerName + ' · ' + hiringProfileState.published.company : 'Hiring team conversation') : connection.person.name), makeElement('span', '', connection.messages.at(-1)?.text || 'Start a conversation'));
     button.addEventListener('click', () => openChat(connection.person.id));
     host.append(button);
   });
@@ -384,23 +381,10 @@ function setupNavigationAndPages() {
   messagesPage.innerHTML = '<div class="page-heading"><p class="eyebrow">MESSAGES</p><h1>Keep the conversation going.</h1><p>Demo conversations stay on this device and do not send messages to real people.</p></div><section id="forwardInbox" class="card inbox-card"></section>';
   const discovery = makeElement('main', 'workspace');
   discovery.id = 'teamDiscovery'; discovery.hidden = true;
-  discovery.innerHTML = '<div class="page-heading"><p class="eyebrow">DISCOVER</p><h1>Imagine your next team.</h1><p>Explore three fictional teams and practice conversations about how you work. These are examples, not open jobs.</p></div><div class="team-grid" id="teamGrid"></div><section class="card discovery-prompts" id="teamConversation" hidden><button type="button" class="link-button" id="closeTeamConversation">Close conversation prompts</button><div id="teamConversationPrompts"></div></section>';
   $('siteShell').insertBefore(homePage, $('applicantWorkspace'));
   $('siteShell').insertBefore(connectionsPage, $('roleModal'));
   $('siteShell').insertBefore(messagesPage, $('roleModal'));
   $('siteShell').insertBefore(discovery, $('roleModal'));
-  sampleTeams.forEach((team, index) => {
-    const card = makeElement('article', 'card team-card');
-    card.append(makeElement('div', 'team-monogram', ['S', 'C', 'D'][index]), makeElement('p', 'eyebrow', team.kind), makeElement('h2', '', team.name), makeElement('p', '', team.copy));
-    const button = makeElement('button', 'button secondary', 'Explore a conversation →'); button.type = 'button';
-    button.addEventListener('click', () => {
-      $('teamConversation').hidden = false;
-      renderDiscussionPanel('teamConversationPrompts', 'applicant', applicantPreferences, team, `Practice with ${team.name.toLowerCase()}. No application or message is sent.`);
-      $('teamConversation').scrollIntoView({ block: 'start', behavior: 'smooth' });
-    });
-    card.append(button); $('teamGrid').append(card);
-  });
-  $('closeTeamConversation').addEventListener('click', () => { $('teamConversation').hidden = true; });
   document.addEventListener('click', event => {
     const route = event.target.closest('[data-route]');
     if (route) navigateForward(route.dataset.route);
@@ -417,6 +401,7 @@ function initializeForwardUI() {
   setupWelcome();
   setupBuilder();
   setupWorkOnboarding();
+  setupTeamDiscovery();
   const conversation = makeElement('details', 'card profile-conversation');
   conversation.append(makeElement('summary', '', 'Prepare for a conversation about how you work'), $('applicantLiveDiscussion'));
   document.querySelector('#applicantLivePage .applicant-hub-grid').insertAdjacentElement('afterend', conversation);
@@ -428,17 +413,7 @@ function initializeForwardUI() {
   complete.innerHTML = '<h3>You are all caught up.</h3><p>Every applicant in this demo has been reviewed. Your connections and notes are in Connections.</p>';
   $('reviewCard').append(complete);
   const shortcut = makeElement('button', 'button secondary', 'Review my uploaded profile'); shortcut.type = 'button'; shortcut.id = 'reviewOwnProfile';
-  shortcut.addEventListener('click', () => {
-    const person = getInteractiveApplicant();
-    if (!person) { showToast('Switch to Applicant and launch a complete profile first.'); return; }
-    syncInteractiveApplicant();
-    // Move this demo profile to the next review slot without skipping or deleting other applicants.
-    const index = rankedApplicants.findIndex(item => item.id === person.id);
-    if (index < currentIndex) { rankedApplicants.splice(index, 1); currentIndex--; }
-    else rankedApplicants.splice(index, 1);
-    rankedApplicants.splice(currentIndex, 0, person);
-    renderApplicantCard();
-  });
+  shortcut.addEventListener('click', reviewLocalApplicant);
   document.querySelector('#hiringWorkspace .workspace-head').append(shortcut);
   document.querySelector('#hiringWorkspace .workspace-head h2').textContent = 'Meet the person behind the profile.';
   $('passButton').textContent = 'Not now';
@@ -446,4 +421,15 @@ function initializeForwardUI() {
   document.querySelector('#reviewCard .hint').textContent = 'Read their story. Start a conversation.';
   $('feedbackReason').options[0].textContent = 'A required qualification needs discussion';
   document.querySelectorAll('.impact-tile b').forEach(label => { if (label.textContent === 'Community impact') label.textContent = 'Culture & community'; });
+}
+function reviewLocalApplicant() {
+  if (isAdvancing) return;
+  const person = getInteractiveApplicant();
+  if (!person) { showToast('Switch to Applicant and launch a complete profile first.'); return; }
+  syncInteractiveApplicant();
+  const index = rankedApplicants.findIndex(item => item.id === person.id);
+  if (index < currentIndex) { rankedApplicants.splice(index, 1); currentIndex--; }
+  else rankedApplicants.splice(index, 1);
+  rankedApplicants.splice(currentIndex, 0, person);
+  renderApplicantCard();
 }

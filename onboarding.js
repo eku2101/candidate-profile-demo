@@ -94,7 +94,7 @@ function finishWorkOnboarding(role) {
   renderApplicantPrivacyStatus();
   renderRoleBrief();
   if (entering) {
-    if (role === 'hiring') navigateForward('discover');
+    if (role === 'hiring') navigateForward(hasPublishedTeam() ? 'discover' : 'profile');
     else {
       showApplicantPage(applicantLaunched ? 'hub' : 'builder');
       if (!applicantLaunched) showBuilderStep(0, true);
@@ -110,7 +110,7 @@ function renderHomeQuestionnaire() {
   $('homeQuestionnaireTitle').textContent = activeRole === 'hiring' ? 'Your team’s way of working.' : 'Your way of working matters.';
   $('homeQuestionnaireStatus').textContent = complete ? 'Questionnaire complete' : 'Start your questionnaire';
   $('homeQuestionnaireCopy').textContent = activeRole === 'hiring'
-    ? 'Your role brief connects applicant experience with what the team needs and helps both sides discuss working together.'
+    ? 'Your role brief connects applicant experience with what the team needs. Publish your hiring profile to let applicants see your team’s answers, too.'
     : 'Your answers help you and hiring managers explore working together. Keep them up to date as your needs change.';
   $('homeQuestionnaireButton').textContent = complete ? 'Review my answers →' : 'Complete questionnaire →';
 }

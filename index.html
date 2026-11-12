@@ -1410,7 +1410,7 @@
 
       <article class="card role-brief">
         <div>
-          <div class="private-seal">✦ Private role brief</div>
+          <div class="private-seal">✦ Your team’s role brief</div>
           <h3 id="roleBriefTitle">Your role brief is guiding recommendations.</h3>
           <p id="roleBriefCopy">Review order uses experience level only. Working preferences suggest conversation topics and never exclude an applicant.</p>
         </div>
@@ -1588,7 +1588,7 @@
       <p class="eyebrow">Step 1 · Private role brief</p>
       <h2 id="hiringQuizTitle">What does this team need next?</h2>
       <p>Describe your team's working habits so both sides can explore practical ways to work together. Review order uses experience level only.</p>
-      <div class="privacy-notice"><b>Your choice:</b> answers stay in this browser session. Both sides receive suggested discussion topics when preferences differ, while selected answers stay off public profiles. Nothing is sent automatically.</div>
+      <div class="privacy-notice"><b>Your choice:</b> your team answers are saved in this browser. When you publish your hiring profile, applicants in this demo can see all six answers alongside your manager profile and job description. Draft changes stay private until you publish them. Nothing is sent to another device.</div>
       <form class="quiz-form" id="hiringQuizForm">
         <fieldset>
           <legend>Role preferences</legend>
@@ -1779,6 +1779,7 @@
   </div>
 
   <script src="profile-model.js"></script>
+  <script src="team-model.js"></script>
   <script src="resume-tools.js"></script>
   <script>
     const publicApplicants = [
@@ -2241,8 +2242,9 @@
 
     function renderApplicantDiscussions() {
       if (!applicantQuizComplete) return;
-      const team = hiringQuizComplete ? hiringCriteria : sampleDiscussionTeam;
-      const context = hiringQuizComplete
+      const shared = typeof hiringProfileState !== 'undefined' ? hiringProfileState.published : null;
+      const team = shared ? shared.answers : hiringQuizComplete ? hiringCriteria : sampleDiscussionTeam;
+      const context = shared ? 'For a conversation with ' + shared.managerName + ' at ' + shared.company + '. View their profile and shared team answers in Discover.' : hiringQuizComplete
         ? "For your conversation with " + (safeText($("hiringTeamName").value) || "the hiring team") + " — the role brief entered in this local demo. Suggested topics do not reveal the team's selected answers."
         : "Practice with a sample team. These prompts use an example brief, not a real employer or an expression of interest.";
       ["applicantDiscussion", "applicantLiveDiscussion"].forEach(id => {
@@ -2343,7 +2345,7 @@
         const copy = document.createElement("div");
         const title = document.createElement("strong");
         const sub = document.createElement("span");
-        title.textContent = activeRole === 'applicant' ? "Hiring team · Interested in your story" : connection.person.name + " · Interested";
+        title.textContent = activeRole === 'applicant' ? (hasPublishedTeam() ? hiringProfileState.published.managerName + ' · ' + hiringProfileState.published.company : 'Hiring team') + ' · Interested in your story' : connection.person.name + " · Interested";
         sub.textContent = activeRole === 'applicant' ? "Continue the conversation in this browser demo." : "In-app interest notification ready for " + connection.person.role + ".";
         copy.append(title, sub);
         const button = document.createElement("button");
@@ -2351,6 +2353,9 @@
         button.dataset.chatId = connection.person.id;
         button.textContent = "Chat";
         row.append(copy, button);
+        if (activeRole === 'applicant' && hasPublishedTeam()) {
+          row.append(teamButton('View hiring manager', 'secondary', () => openTeamProfile('local-team')));
+        }
         host.append(row);
       });
     }
@@ -2603,8 +2608,8 @@
     function renderChat() {
       const connection = connections[activeConversationId];
       if (!connection) return;
-      $("chatTitle").textContent = connection.person.name;
-      $("chatSubhead").textContent = connection.person.role + " · In-app demo conversation";
+      $("chatTitle").textContent = activeRole === 'applicant' ? (hasPublishedTeam() ? hiringProfileState.published.managerName : 'Hiring team') : connection.person.name;
+      $("chatSubhead").textContent = (activeRole === 'applicant' ? (hasPublishedTeam() ? hiringProfileState.published.company : 'Hiring team') : connection.person.role) + " · In-app demo conversation";
       const host = $("chatMessages");
       host.replaceChildren();
       connection.messages.forEach(message => {
@@ -2754,8 +2759,9 @@
       };
       hiringQuizComplete = true;
       rankRemainingApplicants();
+      const saved = saveHiringBrief();
       finishWorkOnboarding('hiring');
-      showToast("Role brief saved for this session. Discussion topics updated; preferences never reduce an applicant's ranking.");
+      showToast(saved ? 'Role brief saved in this browser. Publish your hiring profile to share these answers with applicants.' : 'Your brief works in this tab but could not be saved. Try Save draft in your hiring profile.');
     });
 
     $("editApplicantQuiz").addEventListener("click", openApplicantQuiz);
@@ -2883,6 +2889,7 @@
   </script>
   <script src="forward-ui.js"></script>
   <script src="onboarding.js"></script>
+  <script src="team-discovery.js"></script>
   <script src="profile-controller.js"></script>
 </body>
 </html>
