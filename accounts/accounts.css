@@ -27,6 +27,10 @@
 .profile-showcase figcaption { margin-top: 6px; color: var(--muted); font-size: .8rem; }
 .profile-image-editor img { display: block; margin: 12px 0; }
 .profile-image-editor input { background: #fff; }
+.example-controls { display: flex; flex-wrap: wrap; gap: 8px; }
+.example-controls [aria-pressed=true] { background: var(--pale); border-color: var(--accent); }
+.example-preview { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--line); }
+.fake-label { display: inline-block; margin-bottom: 14px; padding: 3px 9px; border-radius: 4px; background: var(--pale); color: var(--accent); letter-spacing: .09em; font-size: .75rem; }
 .deck-toolbar label { margin: 0; }
 .deck-toolbar select { width: auto; min-width: 140px; }
 .applicant-deck { max-width: 720px; }
