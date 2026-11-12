@@ -1,0 +1,120 @@
+import {test,before,after,beforeEach} from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile,readdir} from 'node:fs/promises';
+import {PGlite} from '@electric-sql/pglite';
+import {normalizeApplicant} from '../model.mjs';
+const db=new PGlite();
+const a='11111111-1111-4111-8111-111111111111',b='22222222-2222-4222-8222-222222222222',m='33333333-3333-4333-8333-333333333333',n='44444444-4444-4444-8444-444444444444';
+const answers={focus:'protected',brainstorming:'occasional',communication:'written',checkIns:'milestones',rhythm:'flexible',environment:'remote'};
+const applicant=()=>({...normalizeApplicant({fields:{name:'Riley Park',role:'Coordinator',summary:'I help communities.',email:'private@example.test',phone:'555-0100'},preferences:answers}),secret:'never share'});
+const hiring=()=>({fields:{managerName:'Morgan',managerTitle:'Manager',company:'Example team',location:'Remote',managerBio:'I support colleagues.',teamStory:'We learn together.',roleTitle:'Coordinator',employmentType:'Full time',roleSummary:'Help neighbors connect.'},answers:{...answers,experience:'mid'}});
+async function as(id,sql,args=[]) {await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[id||'']);await db.exec('set role '+(id?'authenticated':'anon'));return db.query(sql,args);}
+async function rpc(id,name,args=[],casts=[]) {return as(id,`select public.${name}(${args.map((_,i)=>'$'+(i+1)+(casts[i]?'::'+casts[i]:'')).join(',')}) as result`,args);}
+async function setupApplicant(id=a) {await rpc(id,'forward_register',['applicant']);await rpc(id,'forward_save_draft',[JSON.stringify(applicant()),0],['jsonb','integer']);await rpc(id,'forward_publish_applicant',[1]);}
+async function setupManager(id=m) {await rpc(id,'forward_register',['hiring']);await rpc(id,'forward_save_draft',[JSON.stringify(hiring()),0],['jsonb','integer']);await rpc(id,'forward_publish_hiring',[1]);}
+before(async()=>{
+  await db.exec(`create schema auth;create schema storage;
+    create role anon;create role authenticated;create role service_role bypassrls;
+    grant usage on schema public,auth to anon,authenticated,service_role;
+    create table auth.users(id uuid primary key,email_confirmed_at timestamptz);
+    create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
+    create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);`);
+  const migrations=new URL('../../supabase/migrations/',import.meta.url);
+  for(const file of (await readdir(migrations)).filter(name=>name.endsWith('.sql')).sort())await db.exec(await readFile(new URL(file,migrations),'utf8'));
+});
+beforeEach(async()=>{await db.exec('reset role;truncate auth.users cascade');for(const id of [a,b,m,n])await db.query('insert into auth.users values($1,now())',[id]);});
+after(()=>db.close());
+test('anonymous callers cannot read profiles, files, or register accounts',async()=>{
+  await setupApplicant();
+  for(const table of ['forward_accounts','forward_files','forward_applicant_drafts','forward_applicant_publications','forward_hiring_publications','forward_shares'])await assert.rejects(()=>as(null,'select * from public.'+table),/permission denied/);
+  await assert.rejects(()=>rpc(null,'forward_register',['hiring']),/permission denied/);
+});
+test('roles cannot change and unpublished drafts never leak between accounts',async()=>{
+  await setupApplicant();await setupManager();
+  await assert.rejects(()=>rpc(a,'forward_register',['hiring']),/different role/);
+  assert.equal((await as(m,'select * from public.forward_applicant_drafts')).rows.length,0);
+  assert.equal((await as(a,'select * from public.forward_hiring_drafts')).rows.length,0);
+  await assert.rejects(()=>as(m,'update public.forward_accounts set role=\'applicant\''),/permission denied/);
+});
+test('only a specifically chosen manager gets a shared snapshot, and withdrawal removes access',async()=>{
+  await setupApplicant();await setupManager();await setupManager(n);await setupApplicant(b);
+  assert.equal((await as(m,'select * from public.forward_applicant_publications')).rows.length,0);
+  await rpc(a,'forward_share',[m,1]);
+  const shared=(await as(m,'select profile from public.forward_applicant_publications')).rows[0].profile;
+  assert.equal(shared.name,'Riley Park');
+  for(const key of ['email','phone','preferences','secret'])assert.equal(key in shared,false,key);
+  assert.equal((await as(n,'select * from public.forward_applicant_publications')).rows.length,0);
+  assert.equal((await as(b,'select * from public.forward_applicant_publications')).rows.length,1,'only their own publication');
+  await assert.rejects(()=>as(n,'insert into public.forward_shares values($1,$2,now())',[a,n]),/permission denied/);
+  await rpc(a,'forward_withdraw',[m]);
+  assert.equal((await as(m,'select * from public.forward_applicant_publications')).rows.length,0);
+});
+test('draft edits do not change shared content until explicitly published',async()=>{
+  await setupApplicant();await setupManager();await rpc(a,'forward_share',[m,1]);
+  const next=applicant();next.fields.summary='A revised introduction.';
+  await rpc(a,'forward_save_draft',[JSON.stringify(next),1],['jsonb','integer']);
+  assert.equal((await as(m,'select profile from public.forward_applicant_publications')).rows[0].profile.summary,'I help communities.');
+  await rpc(a,'forward_publish_applicant',[2]);
+  assert.equal((await as(m,'select profile from public.forward_applicant_publications')).rows[0].profile.summary,next.fields.summary);
+});
+test('a stale device cannot overwrite a newer saved profile',async()=>{
+  await setupApplicant();const changed=applicant();changed.fields.name='Updated Name';
+  await rpc(a,'forward_save_draft',[JSON.stringify(changed),1],['jsonb','integer']);
+  await assert.rejects(()=>rpc(a,'forward_save_draft',[JSON.stringify(applicant()),1],['jsonb','integer']),error=>error.code==='PT409'&&/another device/.test(error.message));
+  assert.equal((await as(a,'select document from public.forward_applicant_drafts')).rows[0].document.fields.name,'Updated Name');
+});
+test('the server rejects incomplete profiles, missing answers, and over-limit public text',async()=>{
+  await setupApplicant();let version=1;
+  for(const change of [d=>d.fields.name='',d=>d.preferences.focus='',d=>d.fields.summary=Array(101).fill('word').join(' '),d=>d.featuredRoles[0].summary='Title missing']){
+    const next=applicant();change(next);await rpc(a,'forward_save_draft',[JSON.stringify(next),version++],['jsonb','integer']);
+    await assert.rejects(()=>rpc(a,'forward_publish_applicant',[version]));
+  }
+});
+test('file metadata follows explicit sharing, and a different applicant cannot attach the file',async()=>{
+  await setupApplicant();await setupManager();await setupApplicant(b);
+  const file='55555555-5555-4555-8555-555555555555';
+  await db.exec('reset role');await db.query('insert into public.forward_files(id,owner_id,path,name,mime,size) values($1,$2,$3,\'resume.pdf\',\'application/pdf\',100)',[file,a,a+'/'+file]);
+  const doc=applicant();doc.resumeId=file;
+  await assert.rejects(()=>rpc(b,'forward_save_draft',[JSON.stringify(doc),1],['jsonb','integer']),/does not belong/);
+  await rpc(a,'forward_save_draft',[JSON.stringify(doc),1],['jsonb','integer']);await rpc(a,'forward_publish_applicant',[2]);
+  assert.equal((await as(m,'select * from public.forward_files')).rows.length,0);
+  await rpc(a,'forward_share',[m,2]);assert.equal((await as(m,'select * from public.forward_files')).rows.length,1);
+  await rpc(a,'forward_withdraw',[m]);assert.equal((await as(m,'select * from public.forward_files')).rows.length,0);
+});
+test('unpublishing an applicant also removes all grants instead of silently restoring access later',async()=>{
+  await setupApplicant();await setupManager();await rpc(a,'forward_share',[m,1]);await rpc(a,'forward_unpublish');
+  assert.equal((await as(m,'select * from public.forward_shares')).rows.length,0);
+  await rpc(a,'forward_publish_applicant',[1]);assert.equal((await as(m,'select * from public.forward_applicant_publications')).rows.length,0);
+});
+test('unconfirmed email cannot register and attached résumé metadata cannot be deleted',async()=>{
+  await db.exec('reset role');await db.query('update auth.users set email_confirmed_at=null where id=$1',[b]);
+  await assert.rejects(()=>rpc(b,'forward_register',['applicant']),/Confirm your email/);
+  await setupApplicant();const file='55555555-5555-4555-8555-555555555555';
+  await db.exec('reset role');await db.query('insert into public.forward_files(id,owner_id,path,name,mime,size) values($1,$2,$3,\'resume.pdf\',\'application/pdf\',100)',[file,a,a+'/'+file]);
+  const doc=applicant();doc.resumeId=file;await rpc(a,'forward_save_draft',[JSON.stringify(doc),1],['jsonb','integer']);
+  await db.exec('reset role');await assert.rejects(()=>db.query('delete from public.forward_files where id=$1',[file]),/saved draft/);
+  doc.resumeId=null;await rpc(a,'forward_save_draft',[JSON.stringify(doc),2],['jsonb','integer']);await db.exec('reset role');await db.query('delete from public.forward_files where id=$1',[file]);
+});
+test('only a chosen manager gets discussion prompts, never private answers or later draft changes',async()=>{
+  await setupApplicant();await setupManager();await setupManager(n);const team=hiring();team.answers.communication='live';
+  await rpc(m,'forward_save_draft',[JSON.stringify(team),1],['jsonb','integer']);await rpc(m,'forward_publish_hiring',[2]);
+  await rpc(a,'forward_share',[m,1]);
+  const prompts=(await rpc(m,'forward_conversation_prompts',[a])).rows[0].result;assert.equal(prompts.length,1);assert.equal(prompts[0].topic,'communication');assert.equal('answer' in prompts[0],false);
+  await assert.rejects(()=>as(m,'select * from forward_private.forward_applicant_preferences'),/permission denied/);
+  await assert.rejects(()=>rpc(n,'forward_conversation_prompts',[a]),/not shared/);
+  const next=applicant();next.preferences.communication='live';await rpc(a,'forward_save_draft',[JSON.stringify(next),1],['jsonb','integer']);
+  assert.equal((await rpc(m,'forward_conversation_prompts',[a])).rows[0].result.length,1,'unpublished preference edits stay private');
+  await rpc(a,'forward_publish_applicant',[2]);assert.equal((await rpc(m,'forward_conversation_prompts',[a])).rows[0].result.length,0);
+  await rpc(a,'forward_withdraw',[m]);await assert.rejects(()=>rpc(m,'forward_conversation_prompts',[a]),/not shared/);
+});
+
+test('privileged routines and private answers stay outside the exposed schema',async()=>{
+  await db.exec('reset role');
+  const exposed=await db.query("select p.proname from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.prosecdef");
+  assert.equal(exposed.rows.length,0);
+  assert.equal((await db.query("select has_schema_privilege('anon','forward_private','usage') as allowed")).rows[0].allowed,false);
+  assert.equal((await db.query("select has_function_privilege('authenticated','forward_private.forward_words(text)','execute') as allowed")).rows[0].allowed,false);
+  await setupApplicant();
+  await assert.rejects(()=>as(a,'select * from forward_private.forward_applicant_preferences'),/permission denied/);
+  await assert.rejects(()=>as(null,"select forward_private.forward_register('applicant')"),/permission denied/);
+});

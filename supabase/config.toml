@@ -1,0 +1,3 @@
+[functions.resume]
+# The function validates the user's access token with Auth on every request.
+verify_jwt = false

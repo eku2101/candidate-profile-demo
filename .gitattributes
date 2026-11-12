@@ -1,0 +1,3 @@
+accounts/vendor/* linguist-vendored
+# The bundled SDK contains meaningful whitespace inside string literals.
+accounts/vendor/supabase.js -whitespace text eol=lf
