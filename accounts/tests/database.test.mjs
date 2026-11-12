@@ -177,6 +177,30 @@ test('profile photos follow publication and sharing without exposing draft image
   await rpc(m,'forward_unpublish');
   assert.equal((await filesFor(b,m)).rows.length,0);
 });
+test('a hiring résumé is private while selected background fields publish',async()=>{
+  await setupApplicant();
+  await setupManager();
+  await setupManager(n);
+  const id='55555555-5555-4555-8555-555555555555';
+  await db.exec('reset role');
+  await db.query("insert into public.forward_files(id,owner_id,path,name,mime,size) values($1,$2,$3,'manager.pdf','application/pdf',100)",[id,m,m+'/'+id]);
+  const document={...hiring(),resumeId:id};
+  document.fields.managerExperience='Led a community program.';
+  document.fields.managerEducation='Example University';
+  document.fields.email='private@example.test';
+  await assert.rejects(()=>rpc(n,'forward_save_draft',[JSON.stringify(document),1],['jsonb','integer']),/does not belong/);
+  await rpc(m,'forward_save_draft',[JSON.stringify(document),1],['jsonb','integer']);
+  await db.exec('reset role');
+  await assert.rejects(()=>db.query('delete from public.forward_files where id=$1',[id]),/saved draft first/);
+  await rpc(m,'forward_publish_hiring',[2]);
+  const published=(await as(a,'select profile from public.forward_hiring_publications where owner_id=$1',[m])).rows[0].profile;
+  assert.equal(published.managerExperience,'Led a community program.');
+  assert.equal(published.managerEducation,'Example University');
+  assert.equal('email' in published,false);
+  assert.equal('resumeId' in published,false);
+  assert.equal((await as(a,'select id from public.forward_files where id=$1',[id])).rows.length,0);
+  assert.equal((await as(m,'select id from public.forward_files where id=$1',[id])).rows.length,1);
+});
 test('unpublishing an applicant also removes all grants instead of silently restoring access later',async()=>{
   await setupApplicant();await setupManager();await rpc(a,'forward_share',[m,1]);await rpc(a,'forward_unpublish');
   assert.equal((await as(m,'select * from public.forward_shares')).rows.length,0);

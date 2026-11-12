@@ -42,7 +42,7 @@ export function createResumeHandler({createUserClient,admin,allowedOrigin,random
         const photo=kind!=='resume';
         const maxBytes=photo?2*1024*1024:MAX_BYTES;
         const account=await client.from('forward_accounts').select('role').eq('user_id',userId).single();
-        if(account.error||!['applicant','hiring'].includes(account.data?.role)||(!photo&&account.data.role!=='applicant'))return json(403,'This account cannot upload this type of file.');
+        if(account.error||!['applicant','hiring'].includes(account.data?.role))return json(403,'Choose an account role before uploading.');
         const length=Number(request.headers.get('content-length'));
         if(length>maxBytes+65536)return json(413,photo?'Choose a smaller profile image.':'Choose a file no larger than 10 MB.');
         const form=await boundedForm(request,maxBytes);if(!form)return json(413,photo?'Choose a smaller profile image.':'Choose a file no larger than 10 MB.');
@@ -72,12 +72,13 @@ export function createResumeHandler({createUserClient,admin,allowedOrigin,random
       if(request.method==='DELETE') {
         if(file.owner_id!==userId)return json(403,'Only the owner can remove a document.');
         const published=await client.from('forward_applicant_publications').select('resume_id').eq('owner_id',userId).maybeSingle();
-        const draft=await client.from('forward_applicant_drafts').select('document').eq('owner_id',userId).maybeSingle();
-        if(published.error||draft.error)throw new Error('Document check failed');
-        if(published.data?.resume_id===id||draft.data?.document?.resumeId===id)return json(409,'Remove this document from your saved draft and shared profile first.');
+        const [applicantDraft,hiringDraft]=await Promise.all(['forward_applicant_drafts','forward_hiring_drafts'].map(table=>client.from(table).select('document').eq('owner_id',userId).maybeSingle()));
+        if(published.error||applicantDraft.error||hiringDraft.error)throw new Error('Document check failed');
+        if(published.data?.resume_id===id||[applicantDraft,hiringDraft].some(draft=>draft.data?.document?.resumeId===id))return json(409,'Remove this document from your saved draft and shared profile first.');
         // The publication foreign key must be checked before removing bytes: a concurrent
         // publication must never lose its document between our checks and deletion.
         const deleted=await admin.from('forward_files').delete().eq('id',id).eq('owner_id',userId);
+        if(deleted.error?.code==='PT409')return json(409,deleted.error.message);
         if(deleted.error)throw deleted.error;
         const removed=await admin.storage.from('forward-resumes').remove([file.path]);
         if(removed.error)throw removed.error;
