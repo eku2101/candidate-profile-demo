@@ -324,6 +324,12 @@ function setupBuilder() {
   updateRoleSuggestions();
   showBuilderStep(builderStep);
 }
+function veraInvitation() {
+  const card = makeElement('aside', 'home-vera');
+  card.setAttribute('aria-label', 'Meet Vera');
+  card.innerHTML = `<img class="home-vera-portrait" src="assets/vera-portrait.jpg" width="64" height="64" alt="" /><div class="home-vera-copy"><h2>Meet Vera</h2><p>Get help with Forward or find the words for your profile. No account needed.</p></div><button class="button secondary" type="button" data-open-forward-help aria-haspopup="dialog" aria-controls="forwardHelp" disabled>Ask Vera</button>`;
+  return card;
+}
 function setupWelcome() {
   const stages = makeElement('div', 'intro-stages');
   stages.setAttribute('aria-hidden', 'true');
@@ -334,6 +340,7 @@ function setupWelcome() {
   welcome.setAttribute('role', 'dialog'); welcome.setAttribute('aria-modal', 'true'); welcome.setAttribute('aria-labelledby', 'welcomeTitle');
   welcome.innerHTML = `<div class="welcome-card"><button id="welcomeClose" class="welcome-close" aria-label="Close welcome" type="button" hidden>×</button><p class="eyebrow">WELCOME TO A NEW WAY FORWARD</p><h1 id="welcomeTitle" tabindex="-1">Your experience matters.<br><em>So does the person behind it.</em></h1><p class="welcome-lead">Bring your work, values, and contributions into the same conversation. Discover people and teams with room for different ways of working.</p><p class="welcome-prompt">What would you like people to see? Try a card.</p><div class="welcome-choices"><button type="button" data-welcome="impact" aria-pressed="true">My impact <span>What changed because of me</span></button><button type="button" data-welcome="values" aria-pressed="false">My values <span>What gives my work meaning</span></button><button type="button" data-welcome="growth" aria-pressed="false">My growth <span>How I keep moving forward</span></button><button type="button" data-welcome="team" aria-pressed="false">My team connections <span>How I support people</span></button></div><div class="welcome-example" aria-live="polite"><span class="eyebrow">A STORY YOU COULD SHARE</span><p id="welcomeExample">“I improved our handover process so customers received help sooner and colleagues had clearer next steps.”</p></div><div class="welcome-footer"><span>New standards. A way Forward.</span><button type="button" class="button primary" id="welcomeContinue" disabled>Explore Forward →</button></div></div>`;
   $('siteShell').insertAdjacentElement('beforebegin', welcome);
+  welcome.querySelector('.welcome-footer').before(veraInvitation());
   const examples = { impact: '“I improved our handover process so customers received help sooner and colleagues had clearer next steps.”', values: '“I care about making complicated information easier to understand, especially for people asking for help.”', growth: '“I learned a new system, helped my team adopt it, and grew more confident leading a project.”', team: '“I helped organize a team retreat where colleagues could exchange ideas and get to know one another.”' };
   welcome.querySelectorAll('[data-welcome]').forEach(button => button.addEventListener('click', () => {
     welcome.querySelectorAll('[data-welcome]').forEach(choice => choice.setAttribute('aria-pressed', String(choice === button)));
@@ -343,7 +350,7 @@ function setupWelcome() {
   $('welcomeContinue').addEventListener('click', closeWelcome);
   $('pauseIntro').addEventListener('click', toggleIntroPlayback);
   document.addEventListener('keydown', event => {
-    if (welcome.hidden) return;
+    if (welcome.hidden || $('forwardHelp').open) return;
     if (event.key === 'Escape') { event.preventDefault(); closeWelcome(); }
     if (event.key === 'Tab') {
       const focusable = [...welcome.querySelectorAll('button:not([disabled]), a[href], [tabindex="0"]')].filter(node => !node.hidden);
@@ -381,6 +388,7 @@ function setupNavigationAndPages() {
   messagesPage.innerHTML = '<div class="page-heading"><p class="eyebrow">MESSAGES</p><h1>Keep the conversation going.</h1><p>Demo conversations stay on this device and do not send messages to real people.</p></div><section id="forwardInbox" class="card inbox-card"></section>';
   const discovery = makeElement('main', 'workspace');
   discovery.id = 'teamDiscovery'; discovery.hidden = true;
+  homePage.querySelector('.home-bottom').before(veraInvitation());
   $('siteShell').insertBefore(homePage, $('applicantWorkspace'));
   $('siteShell').insertBefore(connectionsPage, $('roleModal'));
   $('siteShell').insertBefore(messagesPage, $('roleModal'));
@@ -403,6 +411,7 @@ function initializeForwardUI() {
   setupWorkOnboarding();
   setupTeamDiscovery();
   import('./accounts/entry.mjs?v=public-signup-1').then(module => module.addAccountEntry()).catch(() => {});
+  import('./accounts/help-chat.mjs?v=vera-home-1').then(module => module.installHelpChat());
   const conversation = makeElement('details', 'card profile-conversation');
   conversation.append(makeElement('summary', '', 'Prepare for a conversation about how you work'), $('applicantLiveDiscussion'));
   document.querySelector('#applicantLivePage .applicant-hub-grid').insertAdjacentElement('afterend', conversation);

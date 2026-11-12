@@ -1007,7 +1007,7 @@
       .media-upload-row { align-items: flex-start; flex-direction: column; }
     }
   </style>
-  <link rel="stylesheet" href="forward.css" />
+  <link rel="stylesheet" href="forward.css?v=vera-home-1" />
 </head>
 <body>
   <section class="intro-overlay" id="introOverlay" role="dialog" aria-modal="true" aria-labelledby="introTitle" aria-describedby="introCopy">
@@ -1781,6 +1781,23 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </div>
+
+  <dialog id="forwardHelp" class="home-help-dialog" aria-labelledby="forwardHelpTitle">
+    <form method="dialog" class="home-help-close"><button type="submit" aria-label="Close Vera">×</button></form>
+    <div class="home-help-heading">
+      <img class="home-vera-portrait" src="assets/vera-portrait.jpg" width="64" height="64" alt="" />
+      <h2 id="forwardHelpTitle">Ask Vera</h2>
+    </div>
+    <p class="home-help-note">Vera’s free guide can help you use Forward and find the words for your profile. Keep passwords and private details out of the chat.</p>
+    <div id="forwardHelpLog" class="help-log" role="log" aria-label="Help conversation" tabindex="0"></div>
+    <div id="forwardHelpTopics" class="help-topics" aria-label="Common questions"></div>
+    <form id="forwardHelpForm">
+      <label for="forwardHelpQuestion">Your question</label>
+      <textarea id="forwardHelpQuestion" rows="2" maxlength="1000" required></textarea>
+      <button class="button primary" type="submit">Send question</button>
+      <p id="forwardHelpStatus" class="home-help-note" role="status"></p>
+    </form>
+  </dialog>
 
   <script src="profile-model.js"></script>
   <script src="team-model.js"></script>
@@ -2901,7 +2918,7 @@
     });
 
   </script>
-  <script src="forward-ui.js?v=public-signup-1"></script>
+  <script src="forward-ui.js?v=vera-home-1"></script>
   <script src="onboarding.js"></script>
   <script src="team-discovery.js"></script>
   <script src="profile-controller.js"></script>

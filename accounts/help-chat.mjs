@@ -1,6 +1,6 @@
 import {guidedReply,topics} from './help-guide.mjs?v=help-chat-1';
 
-export function installHelpChat(getContext){
+export function installHelpChat(getContext=()=>({})){
   const dialog=document.getElementById('forwardHelp');
   const form=document.getElementById('forwardHelpForm');
   const input=document.getElementById('forwardHelpQuestion');
@@ -63,8 +63,11 @@ export function installHelpChat(getContext){
     suggestions.append(suggestion);
   }
   form.addEventListener('submit',event=>{event.preventDefault();ask(input.value);});
-  document.getElementById('openForwardHelp').addEventListener('click',()=>{
-    if(!log.children.length)addMessage('Vera','Hi, I’m Vera. I’m glad you’re here! Whether you’re building your profile or figuring out where to start, we can take it one step at a time. What’s on your mind?');
-    dialog.showModal();
-  });
+  for(const launch of document.querySelectorAll('#openForwardHelp, [data-open-forward-help]')){
+    launch.addEventListener('click',()=>{
+      if(!log.children.length)addMessage('Vera','Hi, I’m Vera. I’m glad you’re here! Whether you’re building your profile or figuring out where to start, we can take it one step at a time. What’s on your mind?');
+      dialog.showModal();
+    });
+    launch.disabled=false;
+  }
 }
