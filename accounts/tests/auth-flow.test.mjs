@@ -21,6 +21,14 @@ test('successful signup advances to confirmation rather than an unauthenticated 
   assert.deepEqual(result,{kind:'confirmation',email:signup.email});
   assert.equal(request.options.emailRedirectTo,signup.returnURL);
 });
+test('signup enforces the server’s password limit in bytes before requesting an account',async()=>{
+  let calls=0;
+  const auth={async signUp(){calls++;return {data:{session:null}};}};
+  await assert.rejects(submitAuthentication(auth,{...signup,password:'a'.repeat(73)}),/72 bytes/);
+  await assert.rejects(submitAuthentication(auth,{...signup,password:'é'.repeat(37)}),/72 bytes/);
+  await submitAuthentication(auth,{...signup,password:'é'.repeat(36)});
+  assert.equal(calls,1);
+});
 test('SMTP failure stays an error and never reports that confirmation was sent',async()=>{
   await assert.rejects(submitAuthentication({async signUp(){return {data:{},error:{status:500,message:'Error sending confirmation email'}};}},signup),/could not send the confirmation email/);
 });

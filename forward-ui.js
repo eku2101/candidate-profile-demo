@@ -346,7 +346,7 @@ function setupWelcome() {
     if (welcome.hidden) return;
     if (event.key === 'Escape') { event.preventDefault(); closeWelcome(); }
     if (event.key === 'Tab') {
-      const focusable = [...welcome.querySelectorAll('button:not([disabled]), [tabindex="0"]')].filter(node => !node.hidden);
+      const focusable = [...welcome.querySelectorAll('button:not([disabled]), a[href], [tabindex="0"]')].filter(node => !node.hidden);
       const first = focusable[0], last = focusable.at(-1);
       if (event.shiftKey && (document.activeElement === first || document.activeElement === $('welcomeTitle'))) { event.preventDefault(); last.focus(); }
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }

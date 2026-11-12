@@ -1,7 +1,7 @@
 import {accountConfig} from './config.js';
 import {configReady,applicantFields,questions,questionLabels,normalizeApplicant,applicantIssues,importReviewedFields,wordCount,discussionPrompts} from './model.mjs';
 import {createAccountAPI} from './api.mjs';
-import {validateAuthInput,submitAuthentication,authErrorMessage} from './auth-flow.mjs';
+import {validateAuthInput,submitAuthentication,authErrorMessage,newPasswordError} from './auth-flow.mjs';
 const $=id=>document.getElementById(id);
 const node=(tag,text,className)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(className)e.className=className;return e;};
 const button=(text,fn,kind='secondary')=>{const e=node('button',text,'button '+kind);e.type='button';e.addEventListener('click',()=>run(e,fn));return e;};
@@ -214,7 +214,21 @@ async function showSharedApplicant(id){
     if(prompts?.length){const list=node('ul');for(const prompt of prompts)list.append(node('li',prompt.question));body.append(list);}else body.append(node('p','What helps each of us do our best work, and what should we agree on before starting?'));
   });
 }
-function setAuthMode(mode){authMode=mode;$('signInTab').setAttribute('aria-pressed',String(mode==='signin'));$('signUpTab').setAttribute('aria-pressed',String(mode==='signup'));$('authSubmit').textContent=mode==='signin'?'Sign in →':'Create account →';$('authPassword').autocomplete=mode==='signin'?'current-password':'new-password';$('authPassword').minLength=mode==='signin'?1:12;$('passwordHelp').textContent=mode==='signup'?'Use at least 12 characters. We’ll email you a confirmation link.':'Your session stays in this tab. Sign out when using a shared computer.';}
+function setAuthMode(mode){
+  if(mode!==authMode){
+    $('authStatus').textContent='';
+    $('authStatus').classList.remove('error');
+    $('authEmail').removeAttribute('aria-invalid');
+    $('authPassword').removeAttribute('aria-invalid');
+  }
+  authMode=mode;
+  $('signInTab').setAttribute('aria-pressed',String(mode==='signin'));
+  $('signUpTab').setAttribute('aria-pressed',String(mode==='signup'));
+  $('authSubmit').textContent=mode==='signin'?'Sign in →':'Create account →';
+  $('authPassword').autocomplete=mode==='signin'?'current-password':'new-password';
+  $('authPassword').minLength=mode==='signin'?1:12;
+  $('passwordHelp').textContent=mode==='signup'?'Use at least 12 characters. We’ll email you a confirmation link.':'Your session stays in this tab. Sign out when using a shared computer.';
+}
 async function handleSession(session,event){
   const epoch=++sessionEpoch;
   if(user&&session?.user?.id!==user.id){location.replace('accounts.html');return;}
@@ -243,6 +257,7 @@ async function initialize(){
   $('accountPreview').hidden=accountConfig.showAccountEntry!==false;
   const {createClient}=await import('./vendor/supabase.js');
   client=createClient(accountConfig.supabaseUrl,accountConfig.publishableKey,{auth:{storage:sessionStorage,persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'implicit',storageKey:'forward-account-session'}});api=createAccountAPI(client);
+  if(new URLSearchParams(location.search).get('mode')==='signup')setAuthMode('signup');
   $('signInTab').addEventListener('click',()=>setAuthMode('signin'));$('signUpTab').addEventListener('click',()=>setAuthMode('signup'));
   const returnURL=new URL('accounts.html',location.href).href;
   $('authForm').noValidate=true;
@@ -276,7 +291,20 @@ async function initialize(){
   $('confirmationChangeEmail').addEventListener('click',()=>{showPage('authPage');setAuthMode('signup');status('Check your email address, then submit your signup.');$('authEmail').focus();});
   $('resetPassword').addEventListener('click',()=>run($('resetPassword'),async()=>{if(!$('authEmail').reportValidity())return;const result=await client.auth.resetPasswordForEmail($('authEmail').value.trim(),{redirectTo:returnURL});if(result.error)throw result.error;status('If an account exists for that email, you’ll receive a password-reset link.');}));
   $('resendConfirmation').addEventListener('click',()=>run($('resendConfirmation'),async()=>{if(!$('authEmail').reportValidity())return;const result=await client.auth.resend({type:'signup',email:$('authEmail').value.trim(),options:{emailRedirectTo:returnURL}});if(result.error)throw result.error;status('If confirmation is still needed, check your email for a new link.');}));
-  $('recoveryForm').addEventListener('submit',event=>{event.preventDefault();run(event.submitter,async()=>{if($('newPassword').value!==$('confirmPassword').value)throw new Error('The passwords do not match.');const result=await client.auth.updateUser({password:$('newPassword').value});if(result.error)throw result.error;$('recoveryForm').reset();recovery=false;await handleSession((await client.auth.getSession()).data.session);status('Your password has been updated.');});});
+  $('recoveryForm').addEventListener('submit',event=>{
+    event.preventDefault();
+    run(event.submitter,async()=>{
+      const password=$('newPassword').value;
+      if(password!==$('confirmPassword').value)throw new Error('The passwords do not match.');
+      const issue=newPasswordError(password);
+      if(issue)throw new Error(issue);
+      const result=await client.auth.updateUser({password});
+      if(result.error)throw result.error;
+      $('recoveryForm').reset();recovery=false;
+      await handleSession((await client.auth.getSession()).data.session);
+      status('Your password has been updated.');
+    });
+  });
   document.querySelectorAll('[data-account-role]').forEach(b=>b.addEventListener('click',()=>run(b,async()=>{account=await api.register(b.dataset.accountRole);await loadOwned();step=0;route='profile';renderNav();renderEditor();status('Your account is ready. Start with your work preferences.');})));
   client.auth.onAuthStateChange((event,session)=>{
     if(event==='TOKEN_REFRESHED')return;

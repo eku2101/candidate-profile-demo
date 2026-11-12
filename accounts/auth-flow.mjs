@@ -1,8 +1,15 @@
+export function newPasswordError(password) {
+  if([...password].length<12)return 'Use at least 12 characters for your new password.';
+  if(new TextEncoder().encode(password).length>72)return 'Choose a shorter password. The limit is 72 bytes, and some characters use more than one byte.';
+  return null;
+}
+
 export function validateAuthInput({mode,email,password}) {
   if(!email.trim())return {field:'authEmail',message:'Enter your email address.'};
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))return {field:'authEmail',message:'Enter a complete email address, such as name@example.com.'};
   if(!password)return {field:'authPassword',message:'Enter your password.'};
-  if(mode==='signup'&&password.length<12)return {field:'authPassword',message:'Use at least 12 characters for your new password. Your signup has not been submitted yet.'};
+  const issue=mode==='signup'?newPasswordError(password):null;
+  if(issue)return {field:'authPassword',message:`${issue} Your signup has not been submitted yet.`};
   if(password.length>128)return {field:'authPassword',message:'Keep your password to 128 characters or fewer.'};
   return null;
 }
