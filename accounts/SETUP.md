@@ -31,7 +31,7 @@ From `accounts/`, install the lockfile dependencies with pnpm, then run:
 
 ```text
 pnpm install --frozen-lockfile --ignore-scripts
-node --test tests/model.test.mjs tests/database.test.mjs
+node --test tests/auth-flow.test.mjs tests/model.test.mjs tests/database.test.mjs
 node build-vendor.mjs
 ```
 
