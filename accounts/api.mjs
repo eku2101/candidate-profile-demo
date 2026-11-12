@@ -30,6 +30,7 @@ export function createAccountAPI(client) {
       return checked(before===undefined?query:query.lt('id',before));
     },
     chatStarter:id=>checked(client.rpc('forward_chat_starter',{p_connection_id:id})),
+    messageUpdates:()=>checked(client.rpc('forward_message_updates')),
     employerStatus:async()=> (await checked(client.rpc('forward_employer_status')))[0]||null,
     requestVerification:website=>checked(client.rpc('forward_request_employer_verification',{p_website:website})),
     messages:(id,before)=>{

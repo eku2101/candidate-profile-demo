@@ -86,6 +86,18 @@ test('a share stays private, pass is hidden, and only a mutual match can chat',a
   assert.deepEqual((await signals(a)).rows,Array(2).fill({payload:{},event:'message-added',private:true}));
   assert.equal((await signals(m)).rows.length,2);
   assert.equal((await signals(b)).rows.length,0);
+  const updates=actor=>as(actor,'select * from public.forward_message_updates()');
+  const messages=(await as(a,'select id,sender_id from public.forward_messages')).rows;
+  for(const [recipient,sender] of [[a,m],[m,a]]){
+    assert.deepEqual((await updates(recipient)).rows,[{
+      connection_id:pending.id,message_id:messages.find(row=>row.sender_id===sender).id
+    }]);
+    await as(recipient,"select set_config('realtime.topic',$1,false)",['forward-inbox:'+recipient]);
+    assert.deepEqual((await signals(recipient)).rows,[{payload:{},event:'message-received',private:true}]);
+    assert.equal((await signals(sender)).rows.length,0);
+  }
+  assert.equal((await updates(b)).rows.length,0);
+  await as(a,"select set_config('realtime.topic',$1,false)",['forward-chat:'+pending.id]);
   assert.equal((await as(n,'select * from public.forward_connections()')).rows.length,0);
   await assert.rejects(()=>as(n,send,[pending.id,'Unrelated manager']),/row-level security/);
   await assert.rejects(()=>as(m,'insert into public.forward_messages(connection_id,sender_id,body) values($1,$2,$3)',[pending.id,a,'Spoofed sender']),/permission denied/);
@@ -93,6 +105,7 @@ test('a share stays private, pass is hidden, and only a mutual match can chat',a
   await rpc(a,'forward_withdraw',[m]);
   assert.equal((await as(m,'select * from public.forward_messages')).rows.length,0);
   assert.equal((await signals(m)).rows.length,0);
+  assert.equal((await updates(m)).rows.length,0);
   assert.equal((await as(a,'select * from public.forward_connections()')).rows.length,0);
   await rpc(a,'forward_share',[m,1]);
   assert.equal((await as(m,'select * from public.forward_connections()')).rows.length,0);

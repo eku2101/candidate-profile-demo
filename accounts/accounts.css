@@ -50,6 +50,23 @@
 .help-chat-actions { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
 .help-chat-actions p { margin: 0; }
 .feedback-inbox { margin-top: 16px; max-width: 760px; }
+.message-notice {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 6;
+  width: min(26rem, calc(100% - 2rem));
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 20px;
+  border: 1px solid var(--line);
+  box-shadow: 0 6px 24px #251c3d26;
+}
+.practice-review { margin-bottom: 0; }
+.practice-review h3 { margin-top: 0; }
 .feedback-inbox time { display: block; margin-bottom: 12px; color: var(--muted); font-size: .8rem; }
 .feedback-inbox h2 { margin-bottom: 8px; }
 .feedback-inbox .card-meta { margin-bottom: 4px; }
