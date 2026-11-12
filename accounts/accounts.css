@@ -31,6 +31,9 @@
 .example-controls [aria-pressed=true] { background: var(--pale); border-color: var(--accent); }
 .example-preview { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--line); }
 .fake-label { display: inline-block; margin-bottom: 14px; padding: 3px 9px; border-radius: 4px; background: var(--pale); color: var(--accent); letter-spacing: .09em; font-size: .75rem; }
+.resume-import-actions { position: sticky; bottom: 0; background: #fff; padding: 14px 0 0; border-top: 1px solid var(--line); }
+.inline-example { margin-bottom: 0; }
+.inline-example > .profile-identity { margin-top: 16px; }
 .deck-toolbar label { margin: 0; }
 .deck-toolbar select { width: auto; min-width: 140px; }
 .applicant-deck { max-width: 720px; }
