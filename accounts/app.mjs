@@ -91,23 +91,22 @@ function renderEditor(){
   const labels=account.role==='applicant'?['Work preferences','About you','Your top three','Values & teamwork','Review & share']:['Team questionnaire','Manager & role','Review & publish'];
   step=Math.min(step,labels.length-1);const steps=node('nav',undefined,'steps');steps.setAttribute('aria-label','Profile steps');
   labels.forEach((label,i)=>{const b=button(`${i+1}. ${label}`,()=>{step=i;renderEditor();});if(i===step)b.setAttribute('aria-current','step');steps.append(b);});panel.append(steps,node('p',`STEP ${step+1} OF ${labels.length}`,'eyebrow'),node('h2',labels[step]));
+  if(account.role==='applicant'&&step<=1)renderResumeUpload(panel);
   if(step===0){panel.append(node('p','There is no ideal answer. Differences help start a conversation and never exclude someone.'));
     panel.append(node('p',account.role==='applicant'?'Your selected answers stay private. Managers you share with receive discussion questions about differences, without seeing your selected answers. You can compare your answers with a manager’s published answers when exploring a team.':'These team answers will be included when you publish your manager profile.','notice'));
     panel.append(questionForm(account.role==='applicant'?draft.preferences:draft.answers,account.role==='hiring'));
   }else if(account.role==='hiring'&&step===1){panel.append(fieldsGrid(ForwardTeams.fields,draft.fields,changed,'manager-'));}
   else if(account.role==='applicant'&&step===1){
-    const upload=node('details');upload.append(node('summary','Start with your résumé'));const label=node('label','Choose a résumé · PDF, JPG, PNG, or WebP · up to 10 MB');label.htmlFor='cloudResume';const input=node('input');input.type='file';input.id='cloudResume';input.accept='.pdf,.jpg,.jpeg,.png,.webp';input.addEventListener('change',()=>run(input,()=>reviewResume(input.files[0])));
-    upload.append(label,input,node('p','PDF text is read on this device. Review it before saving the document to your account. Images attach a document but do not autofill text.','help'));
-    const pasteLabel=node('label','Or paste résumé text');pasteLabel.htmlFor='cloudPaste';const paste=node('textarea');paste.id='cloudPaste';upload.append(pasteLabel,paste,button('Review pasted résumé',()=>{if(paste.value.trim().length<25)throw new Error('Paste your résumé text first.');reviewImport(ForwardResume.parseResumeText(paste.value),null);}));
-    upload.append(button('Import this browser’s demo profile',importBrowserDraft));panel.append(upload);
-    panel.append(node('p',currentFile()?'Saved résumé: '+currentFile().name:'No résumé attached.','help'));
     panel.append(fieldsGrid(Object.fromEntries(Object.entries(applicantFields).slice(0,7)),draft.fields,changed,'applicant-'));
+    const history=node('details');
+    history.open=Boolean(draft.fields.experience||draft.fields.education||draft.fields.credentials);
+    history.append(node('summary','Full work history, education & achievements'),fieldsGrid(Object.fromEntries(Object.entries(applicantFields).slice(7,10)),draft.fields,changed,'history-'));
+    panel.append(history);
     const docs=node('details');docs.append(node('summary','Manage my documents'));renderFiles(docs);panel.append(docs);
   }else if(account.role==='applicant'&&step===2){
-    panel.append(node('p','Feature up to three roles that best show your growth, contribution, and impact. Keep your full work history below.'));
+    panel.append(node('p','Feature up to three roles that best show your growth, contribution, and impact. You can edit your full work history under About you.'));
     const suggestions=ForwardProfile.suggestRoles(draft.fields.experience);
     draft.featuredRoles.forEach((role,i)=>{const section=node('details');section.open=i===0;section.append(node('summary',`Featured role ${i+1}`));if(suggestions.length){const label=node('label','Choose from your work history');label.htmlFor='suggest-'+i;const select=node('select');select.id=label.htmlFor;select.append(new Option('Choose a role…',''));suggestions.forEach((r,j)=>select.append(new Option(r.title+' · '+r.dates,String(j))));select.addEventListener('change',()=>{if(select.value==='')return;draft.featuredRoles[i]={...suggestions[Number(select.value)]};changed();renderEditor();});section.append(label,select);}section.append(fieldsGrid({title:{label:'Role & organization',max:160},dates:{label:'Dates',max:80},summary:{label:'What did you contribute, and what changed?',words:100}},role,changed,'featured-'+i+'-'));section.append(button('Clear highlight',()=>{draft.featuredRoles[i]={title:'',dates:'',summary:''};changed();renderEditor();}));panel.append(section);});
-    const full=node('details');full.append(node('summary','Full work history, education & achievements'),fieldsGrid(Object.fromEntries(['experience','education','credentials'].map(k=>[k,applicantFields[k]])),draft.fields,changed,'history-'));panel.append(full);
   }else if(account.role==='applicant'&&step===3){panel.append(fieldsGrid(Object.fromEntries(Object.entries(applicantFields).slice(10)),draft.fields,changed,'story-'));}
   else renderPublishing(panel);
   const actions=node('div',undefined,'actions');if(step>0)actions.append(button('← Back',()=>{step--;renderEditor();}));if(step<labels.length-1)actions.append(button('Continue →',()=>{if(step===0){const answers=account.role==='applicant'?draft.preferences:draft.answers;const missing=Object.keys(answers).find(k=>!answers[k]);if(missing){$('answer-'+missing).focus();throw new Error('Choose an answer to each question. Different preferences are welcome.');}}step++;renderEditor();},'primary'));panel.append(actions);host.append(panel);
@@ -143,15 +142,96 @@ function renderPublishing(panel){
     dialog(applicant?'Withdraw all sharing?':'Unpublish your hiring profile?',body=>{body.append(node('p',applicant?'Managers will lose access to your profile and résumé. Your chats with them will be removed for both people. Copies already downloaded cannot be retrieved.':'Your manager profile will disappear from Discover teams. Your draft stays saved. Existing applicants who shared with you remain in your applicant list.'),button('Confirm withdrawal',async()=>{await api.unpublish();publication=null;shares=await api.shares();closeDialog();renderEditor();status('Sharing withdrawn. Your private draft is saved.');},'danger'));});
   },'danger'));
 }
+function renderResumeUpload(panel){
+  const upload=node('section',undefined,'notice resume-upload');
+  const title=node('h3','Upload and autofill from your résumé');
+  const label=node('label','Choose a résumé file (up to 10 MB)');
+  label.htmlFor='cloudResume';
+  const input=node('input');
+  input.type='file';
+  input.id=label.htmlFor;
+  input.accept='.pdf,.jpg,.jpeg,.png,.webp';
+  input.setAttribute('aria-describedby','resumeUploadHelp');
+  input.addEventListener('change',()=>run(input,async()=>{
+    try{await reviewResume(input.files[0]);}
+    finally{input.value='';}
+  }));
+  const help=node('p','A PDF with selectable text fills in details such as jobs, education, and skills and saves them to your private draft. For a scan or image, you can attach the file and paste the text.','help');
+  help.id='resumeUploadHelp';
+  upload.append(title,help,label,input);
+  const attached=currentFile();
+  if(attached){
+    upload.append(node('p','Saved résumé: '+attached.name,'help'));
+    if(step===0)upload.append(button('Review my profile details',()=>{step=1;renderEditor();}));
+  }
+  if(step===1){
+    const options=node('details');
+    options.append(node('summary','Paste text or import a demo profile'));
+    const pasteLabel=node('label','Résumé text');
+    pasteLabel.htmlFor='cloudPaste';
+    const paste=node('textarea');
+    paste.id=pasteLabel.htmlFor;
+    options.append(pasteLabel,paste,button('Review pasted résumé',()=>{
+      if(paste.value.trim().length<25)throw new Error('Paste your résumé text first.');
+      reviewImport(ForwardResume.parseResumeText(paste.value),null);
+    }),button('Import this browser’s demo profile',importBrowserDraft));
+    upload.append(options);
+  }
+  panel.append(upload);
+}
+
 async function reviewResume(file){
   if(!file)return;
   if(file.size>10485760||!['application/pdf','image/jpeg','image/png','image/webp'].includes(file.type))throw new Error('Choose a PDF, JPG, PNG, or WebP no larger than 10 MB.');
-  status(file.type==='application/pdf'?'Reading your PDF on this device…':'Review your document before uploading.');
-  if(file.type==='application/pdf')reviewImport(await ForwardResume.extractPdf(file,status),file);
-  else reviewImport({fields:{},warnings:['Image files attach your document without filling profile text.'],rawText:''},file);
+  if(file.type!=='application/pdf'){
+    reviewImport({fields:{},warnings:['This image can be attached to your profile. Paste its text under About you to autofill details.']},file);
+    return;
+  }
+  status('Reading your PDF on this device…');
+  let result;
+  try{result=await ForwardResume.extractPdf(file,status);}
+  catch(error){
+    if(!error.message.startsWith('This PDF has little or no selectable text.'))throw error;
+    reviewImport({fields:{},warnings:['This PDF appears to be a scan. You can attach it and paste its text under About you.']},file);
+    return;
+  }
+  const imported=Object.entries(result.fields).filter(([,value])=>value.trim());
+  const hasConflict=imported.some(([key,value])=>draft.fields[key]?.trim()&&draft.fields[key].trim()!==value.trim());
+  const save=createResumeSaver(file);
+  if(hasConflict||!imported.length){reviewImport(result,file,null,save);return;}
+  try{await save(result.fields);}
+  catch(error){
+    reviewImport(result,file,null,save);
+    status(error.message,true);
+    return;
+  }
+  renderEditor();
+  status(result.warnings.length?'Résumé saved and available details filled in. Review your profile for anything the PDF reader missed.':'Résumé uploaded. Your profile details and work history are filled in and saved.');
 }
-function reviewImport(result,file,wholeProfile=null){
+
+function createResumeSaver(file){
   let uploadedFile=null;
+  return async (reviewed,wholeProfile=null)=>{
+    const editor=$('workspaceContent');
+    editor.inert=true;
+    try{
+      if(file&&!uploadedFile){
+        status('Uploading your résumé to your private account…');
+        uploadedFile=await api.fileRequest({method:'POST',file});
+        files.push(uploadedFile);
+      }
+      const next=importReviewedFields(wholeProfile||draft,reviewed);
+      if(uploadedFile)next.resumeId=uploadedFile.id;
+      const saved=await api.save(next,version);
+      draft=next;
+      version=saved.version;
+      revision++;
+      dirty=false;
+    }finally{editor.inert=false;}
+  };
+}
+
+function reviewImport(result,file,wholeProfile=null,save=createResumeSaver(file)){
   const reviewed=Object.fromEntries(Object.keys(applicantFields).slice(0,10).map(key=>[key,result.fields[key]||'']));
   dialog('Review your résumé details',body=>{
     body.append(node('p',wholeProfile?'Review this browser’s saved information before copying it to your signed-in account. This replaces the current account draft fields and preferences. Photos are not copied.':'Check the extracted details before saving. Non-empty fields replace matching draft fields; your existing personal story, preferences, and highlights stay as written.'));
@@ -160,9 +240,11 @@ function reviewImport(result,file,wholeProfile=null){
     const check=node('input');check.type='checkbox';check.id='ownResumeConfirmation';const label=node('label');label.append(check,document.createTextNode('This information is mine. '+(file?`Upload ${file.name} to my private account.`:'Save these details to my private account.')));body.append(label);
     body.append(button('Save résumé to my account',async()=>{
       if(!check.checked){check.focus();throw new Error('Confirm that this is your information before importing.');}
-      const next=importReviewedFields(wholeProfile||draft,reviewed);
-      if(file){if(!uploadedFile){uploadedFile=await api.fileRequest({method:'POST',file});files.push(uploadedFile);}next.resumeId=uploadedFile.id;}
-      draft=next;changed();await saveDraft();closeDialog();step=2;renderEditor();status('Résumé information saved to your account. Choose the experiences you want to feature.');
+      await save(reviewed,wholeProfile);
+      closeDialog();
+      if(step!==0)step=1;
+      renderEditor();
+      status(Object.values(reviewed).some(value=>value.trim())?'Résumé details filled in and saved. Review your profile for any missing information.':'Résumé attached to your private draft.');
     },'primary'));
   });
 }
