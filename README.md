@@ -2,23 +2,27 @@
 
 [Visit the live Forward website](https://eku2101.github.io/candidate-profile-demo/)
 
-Forward is a browser-only prototype for two audiences: applicants building a public portfolio profile and hiring teams reviewing a ranked applicant pipeline. The startup role picker keeps the experiences separate, then starts each role with its own private intake questionnaire.
+Forward is a browser-only prototype for two audiences: applicants building a fuller professional story and hiring teams exploring people to meet. The opening experience introduces that purpose, then a shared navigation bar organizes Home, Discover, Connections, Messages, and Profile. Each audience has its own workspace and work-preference questions.
 
 ## Included interactions
 
-- **Cinematic opener:** a full-screen Forward introduction reveals the product story before the role picker. It plays automatically for new visitors and can be replayed at any time with **Play intro** in the header or from the role chooser. The visitor chooses **Explore the experience** (or presses Escape) to transition into the app; it respects reduced-motion preferences and stores no profile or matching information.
-- **Applicant private intake:** before accessing the profile builder, applicants independently choose quiet focus time, group brainstorming, everyday communication, and team check-in preferences, alongside workload rhythm and company environment. Each new question includes a flexible option and requires an explicit choice. Answers stay out of the public profile and can be revised with **Edit private preferences**.
+- **Opening experience on every visit:** a ten-second Forward introduction plays each time the page opens or refreshes. Visitors can pause, resume, skip, or replay it; reduced-motion preferences are respected. An interactive welcome follows, with examples of skills, growth, working habits, and contributions. Its close button appears after five seconds, without a visible countdown.
+- **Clear navigation:** Home introduces the next step; Discover shows applicant cards to employers and clearly labeled sample teams to applicants. Connections and Messages have dedicated pages. The navigation moves to the bottom on small screens.
+- **Guided profile builder:** five steps organize About you, Your top three, Values & teamwork, Work preferences, and Review & launch. Applicants can write before completing preferences; preferences are required when launching. Quiet focus, brainstorming, communication, check-ins, workload, and environment are independent choices with flexible options. Selected answers stay out of public profiles.
 - **Résumé import:** choose **Upload document** and select a text-based PDF. The browser reads its pages and opens an editable review of name, role, location, email, phone, skills, introduction, previous jobs, education, and certifications/achievements. Select **Save résumé to my profile** to apply the nonempty reviewed fields and save the original document. Empty fields leave existing details unchanged; mission and culture stories are never invented from the résumé.
-- **Saved applicant profile:** form edits save automatically in IndexedDB, with an explicit **Save profile in this browser** action and a visible saved/error status. Profile fields, the original résumé, profile photo, work preferences, and launch state survive refresh and reopening in the same browser. One applicant profile is stored per browser; **Clear saved profile** removes it after confirmation. Clearing site data also removes it. There are no accounts or cross-device synchronization.
+- **Saved applicant profile:** form edits save automatically in IndexedDB, with an explicit **Save profile in this browser** action and a visible saved/error status. Profile fields, three selected highlights, the original résumé, profile photo, work preferences, and launch state survive refresh and reopening in the same browser. Older saved profiles remain readable; they start with no selected highlights. One applicant profile is stored per browser; **Clear saved profile** removes it after confirmation. Clearing site data also removes it. There are no accounts or cross-device synchronization.
+- **Three featured experiences, complete work history:** applicants choose up to three meaningful roles, including work that helped a team, customers, sales, or a community. Editable suggestions come from their imported work history; the app never chooses the “best” roles automatically. One or two highlights are welcome. All previous jobs remain saved and can be expanded in the profile.
+- **Read the full résumé:** employers see an invitation to review the complete document, plus View and Download links for the applicant's original uploaded PDF. Links are available in the same-browser hiring demo, including the full-story and feedback views. Sample applicants without an attached file never inherit another person's résumé. **Review my uploaded profile** makes testing both sides easier.
+- **Writing guidance:** introduction and each role highlight allow 100 words; mission and values allow 50 each; team care, colleague support, and culture/community allow 75 each. Headlines allow 80 characters and the skill list allows ten comma-separated skills. Counters show remaining limits. Over-limit drafts still save, but must be shortened before launch. Full work history and the original PDF are not shortened by these limits.
 - **Applicant workspace:** **Build profile** edits the imported details and public story. Previous jobs, education, and credentials appear in the live preview, launched hub, hiring card, and full story. Email and phone stay in the private editor. Own JPG/PNG/WebP photos are supported; uploaded images are attachments and do not autofill text. The builder starts blank instead of preloading a fictional applicant.
 - **Launch and applicant presence:** a draft stays out of the hiring pipeline until the applicant selects **Launch profile**. Launch opens an applicant-only activity hub with local manager activity, a feedback channel, and a separate Community & Projects page for project stories, images, PDF attachments, and awards.
 - **Mission and culture profile:** candidates can publicly share why they do their work, their professional values, how they support team well-being and colleagues, and a community contribution they are proud of. These people-centered story sections appear in the live preview, swipe card, and full public profile.
-- **Strong example profile:** the Alex Santos reference is always visible beside the workspace on wide screens and is the only profile that displays an illustrative image. It is a structural guide, not a competitive ranking.
+- **Strong example profile:** the Alex Santos reference can be expanded in Review & launch. It is a structural guide, not a competitive ranking, and does not crowd the editing steps.
 - **Hiring private intake:** before accessing the pipeline, managers and recruiters describe their team's actual focus time, brainstorming, communication, and check-in habits, plus the role's experience level, workload rhythm, and environment. These are working conditions rather than personality labels.
 - **Conversation prompts:** differences in focus time, brainstorming, communication, check-ins, workload, or environment produce optional questions for applicants and employers, each with a practical next step. Questions are tailored to each side and do not quote the other person's selected answers. Suggested topics can indicate where preferences differ, as explained in both intake forms.
 - **Review order:** experience level alone determines the sample pipeline order. Work preferences never lower a candidate's position or exclude anyone. Compatibility percentages have been replaced by clearly labeled experience context. Applicant-built profiles retain the existing mid-level demo baseline, labeled in the hiring view.
 - **Applicant preparation:** applicants can expand **Prepare for a conversation about how you work** in the builder, or see prompts in their launched profile hub. Before a hiring brief is entered, the prompts explicitly use a sample team for practice. After a brief is entered in this browser session, they use that local team's preferences.
-- **Hiring workspace:** review ranked sample applicants with the left/right arrows or a horizontal swipe. The card prioritizes public mission, values, team care, colleague support, and community impact alongside expertise. Right creates a local “Yes — interested” connection; left saves structured feedback.
+- **Hiring workspace:** review sample applicants with **Not now**, **Connect**, or a horizontal swipe. The card brings selected experience, résumé access, mission, values, team care, colleague support, and culture/community together. Connect creates a local interested connection; Not now opens structured feedback.
 - **In-app chat simulation:** an interested applicant receives a Chat button. The drawer stores messages in browser memory and includes a sender selector so either side of the conversation can be demonstrated.
 
 ## Collaboration and iterative design
@@ -61,11 +65,11 @@ One of the most important improvements was separating the applicant workspace fr
 
 ### The profile moved beyond a résumé
 
-The applicant experience now supports both a document-first path and a structured profile-building path. People can add a résumé, portfolio PDF, or their own image, then build a profile with a headline, location, skills, introduction, values, mission, culture footprint, colleague support, and community impact. The Alex Santos example remains visible as a supportive structural guide, showing the shape of a strong profile without asking applicants to copy someone else's identity.
+The applicant experience supports both résumé import and writing from scratch inside a guided builder. People can add a résumé, portfolio PDF, or their own image, then build a profile with a headline, location, skills, introduction, selected experience, values, mission, culture footprint, colleague support, and community impact. The optional Alex Santos example shows the shape of a strong profile without asking applicants to copy someone else's identity.
 
 ### Matching is more transparent and respectful
 
-Both applicants and hiring teams complete intake questions before they use their main workspace. Those inputs suggest concrete conversations about working together, while selected answers stay off public profiles. The hiring view uses experience alone for review order and shows questions for the employer; the applicant's builder and hub offer questions from the applicant's perspective. Preferences do not produce a suitability score or automatic rejection.
+Applicants complete work-preference questions before launching their profile; hiring teams complete their role brief before reviewing applicants. Those inputs suggest concrete conversations about working together, while selected answers stay off public profiles. The hiring view uses experience alone for review order and shows questions for the employer; the applicant's builder and hub offer questions from the applicant's perspective. Preferences do not produce a suitability score or automatic rejection.
 
 ### Interaction feels more active and personal
 
@@ -73,7 +77,7 @@ The recruiter or manager can use left and right arrows, or swipe, to review appl
 
 ### The visual direction supports the idea
 
-The warm editorial palette, cream background, generous white cards, charcoal type, taupe details, and purple interaction color give the site a more thoughtful, less corporate feel. The cinematic **Forward** opener adds an emotional first moment to the product: it introduces the mission before the dashboard appears, and it can be replayed from either the header or the role chooser. This makes the site feel more like a product experience than a static class project.
+The soft lavender background, white cards, charcoal type, purple actions, and consistent spacing give Forward a clearer visual identity. Persistent navigation and a five-step editor reduce competing controls. The cinematic **Forward** opener and interactive welcome introduce the mission before the workspace appears.
 
 ## Major modifications and why they improved the site
 
@@ -90,6 +94,8 @@ The warm editorial palette, cream background, generous white cards, charcoal typ
 | Applicants did not have a meaningful post-profile destination. | Added **Launch profile**, an applicant activity hub, feedback, manager-activity simulation, and a Community & Projects page. | Applicants can see a future-facing view of what happens after they publish and share work beyond the résumé. |
 | The landing experience opened directly into the app. | Added a cinematic, Apple-style **Forward** opener with an explicit enter action and replay controls. | The product starts with its mission and creates a smoother transition into the platform. |
 | Styling needed a more intentional product identity. | Refined the global CSS into a warm editorial visual system with generous spacing and accessible interactive states. | The interface is calmer, more polished, and easier to scan. |
+| Editing and review controls competed on one crowded screen. | Added persistent navigation, a home page, a guided editor, and a welcome experience on every visit. | Applicants and employers have clearer destinations and fewer competing tasks. |
+| A long work history could overwhelm the first impression. | Added three applicant-selected highlights while retaining full history and original résumé downloads. | Applicants choose their strongest stories; employers can still review the complete context. |
 
 ## Product principles carried through the work
 
@@ -108,13 +114,25 @@ Use the published website or a local HTTP server. Direct `file://` opening can b
 Run the work-preference regression checks with Node.js (no dependencies):
 
 ```powershell
-node --test test-work-preferences.cjs test-resume-profile.cjs
+node --test test-work-preferences.cjs test-resume-profile.cjs test-forward-redesign.cjs
 ```
 
 To run a local static preview server with Node.js (this also serves the local portrait image in `assets/`):
 
 ```powershell
-node -e "const http=require('http'),fs=require('fs'),path=require('path'),root=process.cwd(),types={'.html':'text/html; charset=utf-8','.js':'text/javascript','.mjs':'text/javascript','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp'};http.createServer((req,res)=>{const p=decodeURIComponent(new URL(req.url,'http://localhost').pathname),f=path.resolve(root,p==='/'?'index.html':'.'+p);if(f!==root&&!f.startsWith(root+path.sep)){res.writeHead(403);return res.end('Forbidden')}fs.readFile(f,(e,d)=>{res.writeHead(e?404:200,{'Content-Type':e?'text/plain':(types[path.extname(f)]||'application/octet-stream')});res.end(e?'Not found':d)})}).listen(8012)"
+node -e "const http=require('http'),fs=require('fs'),path=require('path'),root=process.cwd(),types={'.html':'text/html; charset=utf-8','.css':'text/css','.js':'text/javascript','.mjs':'text/javascript','.pdf':'application/pdf','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp'};http.createServer((req,res)=>{const p=decodeURIComponent(new URL(req.url,'http://localhost').pathname),f=path.resolve(root,p==='/'?'index.html':'.'+p);if(f!==root&&!f.startsWith(root+path.sep)){res.writeHead(403);return res.end('Forbidden')}fs.readFile(f,(e,d)=>{res.writeHead(e?404:200,{'Content-Type':e?'text/plain':(types[path.extname(f)]||'application/octet-stream')});res.end(e?'Not found':d)})}).listen(8012)"
 ```
 
 Then visit `http://localhost:8012`.
+
+## Next stage: access for real employers
+
+This is a plan, not a feature already enabled. Today, an employer on another computer cannot see an applicant's saved profile or résumé. The website is public; the locally saved files are not uploaded with it.
+
+1. **Give people their own accounts.** Add applicant sign-in, employer sign-in, and verified company membership. Keep the two roles separate from the current demonstration switcher.
+2. **Save shared profiles and files privately online.** Add a database for profiles and private storage for original résumés. Applicants explicitly choose which employer can receive a profile and file. Existing browser drafts should upload only after a clear review and sharing action.
+3. **Check permission on every request.** A server must verify both the signed-in person and their access to that specific profile or file. Use short-lived download links, file-size and content validation, and scanning. Publicly guessing a file URL must not grant access. GitHub Pages can continue serving the interface while a separate service handles these protected operations.
+4. **Let applicants manage access.** Show who has access and provide withdrawal and deletion controls. Explain that withdrawing future access cannot retrieve copies an employer already downloaded. Add retention rules and clear delivery status before enabling real messaging.
+5. **Pilot with two accounts on two devices.** Verify that the intended employer receives the right profile and original PDF, another employer is denied, expired links fail, and withdrawing access blocks future requests. Test recovery, deletion, accessibility, and mobile use before inviting a wider audience.
+
+Implementation guidance: [OWASP authorization guidance](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html) and [OWASP file-upload guidance](https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html). No hosting provider, paid service, account system, or automatic file upload has been introduced by this redesign.

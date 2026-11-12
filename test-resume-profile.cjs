@@ -92,7 +92,7 @@ test('stored schema accepts missing optional fields and rejects invalid versions
 function storageHarness(save) {
   const inputs = Object.fromEntries(resume.fields.map(key => ['profile' + key[0].toUpperCase() + key.slice(1) + 'Input', { value: '' }]));
   const status = { textContent: '' };
-  const context = vm.createContext({ $, document: { querySelectorAll: () => [status] }, ForwardResume: { saveProfile: save },
+  const context = vm.createContext({ $, document: { querySelectorAll: () => [status] }, ForwardProfile: require('./profile-model.js'), ForwardResume: { saveProfile: save },
     applicantPreferences: { focus: 'protected' }, applicantQuizComplete: true, applicantLaunched: false });
   function $(id) { return inputs[id]; }
   vm.runInContext(controller.slice(0, controller.lastIndexOf('initializeProfileApp();')), context);

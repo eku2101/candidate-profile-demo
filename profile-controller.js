@@ -2,6 +2,8 @@
 let savedResumeFile = null;
 let savedPhotoFile = null;
 let savedResumeText = "";
+let featuredRoles = ForwardProfile.normalizeFeaturedRoles([]);
+const resumeDownloadUrls = new Map();
 let pendingResumeImport = null;
 let profileStorageReady = false;
 let profileSaveQueue = Promise.resolve();
@@ -21,18 +23,78 @@ function readProfileFields() {
 function renderCareer(id, person) {
   const host = $(id);
   host.replaceChildren();
+  const highlights = ForwardProfile.normalizeFeaturedRoles(person.featuredRoles).filter(role => role.title.trim());
+  if (highlights.length) {
+    const heading = document.createElement('h4');
+    heading.textContent = 'Featured experience';
+    host.append(heading);
+    highlights.forEach(role => {
+      const card = document.createElement('article');
+      card.className = 'featured-role-card';
+      const title = document.createElement('h4');
+      title.textContent = role.title;
+      const dates = document.createElement('p');
+      dates.className = 'role-dates';
+      dates.textContent = role.dates;
+      const story = document.createElement('p');
+      story.textContent = role.summary;
+      card.append(title, dates, story);
+      host.append(card);
+    });
+  }
   ["experience", "education", "credentials"].forEach(key => {
     if (!person[key]?.trim()) return;
     const section = document.createElement("details");
     section.className = "career-section";
-    section.open = key === "experience";
+    section.open = false;
     const title = document.createElement("summary");
-    title.textContent = profileFieldNames[key];
+    title.textContent = key === 'experience' ? 'Full work history' : profileFieldNames[key];
     const body = document.createElement("p");
     body.textContent = person[key];
     section.append(title, body);
     host.append(section);
   });
+}
+function renderResumeDownload(id, person) {
+  const host = $(id);
+  if (!host) return;
+  if (resumeDownloadUrls.has(id)) URL.revokeObjectURL(resumeDownloadUrls.get(id));
+  resumeDownloadUrls.delete(id);
+  host.replaceChildren();
+  const title = document.createElement('h4');
+  title.textContent = 'Take a look at the full story';
+  const note = document.createElement('p');
+  note.textContent = 'Featured roles are highlights. Review the full résumé for additional experience and context before making a decision.';
+  host.append(title, note);
+  // Only this person's own attachment may be offered; sample applicants have none.
+  if (!(person?.resumeFile instanceof Blob)) {
+    const empty = document.createElement('p');
+    empty.className = 'help';
+    empty.textContent = 'No résumé is attached to this profile.';
+    host.append(empty);
+    return;
+  }
+  const file = person.resumeFile;
+  const url = URL.createObjectURL(file);
+  resumeDownloadUrls.set(id, url);
+  const actions = document.createElement('div');
+  actions.className = 'resume-actions';
+  const view = document.createElement('a');
+  view.className = 'button secondary';
+  view.href = url;
+  view.target = '_blank';
+  view.rel = 'noopener';
+  view.textContent = 'View résumé ↗';
+  const download = document.createElement('a');
+  download.className = 'button primary';
+  download.href = url;
+  download.download = file.name || person.attachmentName || 'resume.pdf';
+  download.textContent = 'Download résumé';
+  actions.append(view, download);
+  const filename = document.createElement('p');
+  filename.className = 'help';
+  filename.textContent = download.download + ' · Original uploaded file';
+  host.append(actions, filename);
 }
 function setSaveStatus(message) {
   document.querySelectorAll("[data-profile-save-status]").forEach(element => { element.textContent = message; });
@@ -41,6 +103,7 @@ function saveApplicantProfile() {
   if (!profileStorageReady) return Promise.resolve(false);
   const version = ++profileSaveVersion;
   const record = { schemaVersion: 1, fields: readProfileFields(), preferences: { ...applicantPreferences },
+    featuredRoles: featuredRoles.map(role => ({ ...role })),
     applicantQuizComplete, applicantLaunched, resumeFile: savedResumeFile, photoFile: savedPhotoFile,
     resumeText: savedResumeText, updatedAt: new Date().toISOString() };
   setSaveStatus("Saving your profile in this browser…");
@@ -56,14 +119,10 @@ function saveApplicantProfile() {
   });
   return profileSaveQueue;
 }
-function showProfileForm() {
-  document.querySelectorAll(".method-tab").forEach(tab => {
-    const selected = tab.dataset.method === "form";
-    tab.classList.toggle("active", selected);
-    tab.setAttribute("aria-selected", String(selected));
-  });
-  $("uploadPane").hidden = true;
+function showProfileForm(step = 0) {
+  $("uploadPane").hidden = false;
   $("formPane").hidden = false;
+  showBuilderStep(step);
 }
 function showResumePreview(file) {
   if (resumeUrl) URL.revokeObjectURL(resumeUrl);
@@ -140,6 +199,7 @@ async function restoreApplicantProfile() {
     if (stored && !record) throw new Error("Saved profile format is not supported.");
     if (record) {
       Object.keys(profileFieldNames).forEach(key => { $(profileFieldId(key)).value = record.fields[key]; });
+      featuredRoles = ForwardProfile.normalizeFeaturedRoles(record.featuredRoles);
       const preferences = record.preferences || {};
       let validPreferences = true;
       [...workPreferenceKeys, "rhythm", "environment"].forEach(key => {
@@ -177,9 +237,12 @@ async function restoreApplicantProfile() {
 
 async function initializeProfileApp() {
   await restoreApplicantProfile();
+  initializeForwardUI();
   Object.keys(profileFieldNames).forEach(key => {
     $(profileFieldId(key)).addEventListener("input", () => {
       updateCandidatePreview();
+      updateWritingGuidance();
+      if (key === 'experience') updateRoleSuggestions();
       saveApplicantProfile();
     });
   });
@@ -225,6 +288,8 @@ async function initializeProfileApp() {
       showResumePreview(savedResumeFile);
     }
     updateCandidatePreview();
+    updateRoleSuggestions();
+    updateWritingGuidance();
     const saved = await saveApplicantProfile();
     $("saveResumeImport").disabled = $("cancelResumeImport").disabled = false;
     if (!saved) {
@@ -233,10 +298,10 @@ async function initializeProfileApp() {
     }
     pendingResumeImport = null;
     $("resumeImportModal").hidden = true;
-    showProfileForm();
+    showProfileForm(1);
     $("fileStatus").textContent = "Résumé information and document saved in this browser.";
     $("profileMediaStatus").textContent = profileAttachmentName ? "Saved résumé: " + profileAttachmentName : "Résumé information saved.";
-    $("profileNameInput").focus();
+    $("featured-0-title").focus();
     showToast("Résumé saved to your profile. You can review and edit every field.");
   });
   updateCandidatePreview();

@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Forward — Private Talent Matching</title>
+  <title>Forward — People, Potential & Possibility</title>
+  <meta name="description" content="Share the experience, values, and contributions behind your résumé. A more human way to explore working together." />
   <style>
     :root {
       --ink: #1A1A1A;
@@ -1006,6 +1007,7 @@
       .media-upload-row { align-items: flex-start; flex-direction: column; }
     }
   </style>
+  <link rel="stylesheet" href="forward.css" />
 </head>
 <body>
   <section class="intro-overlay" id="introOverlay" role="dialog" aria-modal="true" aria-labelledby="introTitle" aria-describedby="introCopy">
@@ -1015,8 +1017,9 @@
       <h1 class="intro-title" id="introTitle">Forward</h1>
       <p class="intro-copy" id="introCopy">Move beyond the résumé black hole. Find the person behind the profile.</p>
       <button class="intro-enter" id="enterExperience" type="button">
-        Explore the experience <span class="arrow" aria-hidden="true">→</span>
+        Skip intro <span class="arrow" aria-hidden="true">→</span>
       </button>
+      <button class="link-button intro-pause" id="pauseIntro" type="button">Pause animation</button>
     </div>
   </section>
 
@@ -1489,12 +1492,12 @@
     <article class="dialog">
       <p class="eyebrow">Welcome to Forward</p>
       <h2 id="roleModalTitle">How are you joining today?</h2>
-      <p>Each role starts with work preferences. Differences suggest helpful discussion topics and never exclude someone from review.</p>
+      <p>Build your story or discover people to meet. Work preferences suggest helpful discussion topics and never exclude someone from review.</p>
       <button class="link-button intro-replay-modal" id="replayIntroFromRole" type="button">Play the intro again</button>
       <div class="roles">
         <button class="role-button" data-role="applicant" type="button">
           <b>I'm an applicant</b>
-          <span>Set private work preferences, then build the profile teams will see.</span>
+          <span>Build your profile, feature your strongest experiences, and share how you work.</span>
         </button>
         <button class="role-button" data-role="hiring" type="button">
           <b>I'm hiring</b>
@@ -1506,7 +1509,7 @@
 
   <div class="overlay" id="applicantQuizModal" hidden role="dialog" aria-modal="true" aria-labelledby="applicantQuizTitle">
     <article class="dialog">
-      <p class="eyebrow">Step 1 · Private matching profile</p>
+      <p class="eyebrow">Private work preferences</p>
       <h2 id="applicantQuizTitle">What helps you do your best work?</h2>
       <p>These answers prepare helpful conversation topics. Different preferences never lower your ranking or exclude you.</p>
       <div class="privacy-notice"><b>Your choice:</b> answers are saved with your profile in this browser on this device and stay off your public profile. Suggested topics may show where preferences differ; the other side does not see your selected answers. You choose what to discuss.</div>
@@ -1770,6 +1773,7 @@
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </div>
 
+  <script src="profile-model.js"></script>
   <script src="resume-tools.js"></script>
   <script>
     const publicApplicants = [
@@ -1891,7 +1895,6 @@
     let profileAttachmentName = "";
     let projectPosts = [];
     let managerViews = [];
-    const introStorageKey = "forward-opener-seen-v2";
     let introExitStarted = false;
     let introExitFinished = false;
     let introReturnsToRoleChooser = true;
@@ -1899,22 +1902,6 @@
 
     function prefersReducedMotion() {
       return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    }
-
-    function hasSeenIntro() {
-      try {
-        return localStorage.getItem(introStorageKey) === "true";
-      } catch {
-        return false;
-      }
-    }
-
-    function rememberIntro() {
-      try {
-        localStorage.setItem(introStorageKey, "true");
-      } catch {
-        // Storage may be unavailable in a privacy-focused browser mode.
-      }
     }
 
     function showRoleChooser() {
@@ -1927,7 +1914,7 @@
       const shell = $("siteShell");
       if (!intro || intro.hidden || introExitStarted) return;
       introExitStarted = true;
-      rememberIntro();
+      stopIntroPlayback();
 
       const revealExperience = () => {
         if (introExitFinished) return;
@@ -1938,14 +1925,7 @@
         shell.inert = false;
         shell.removeAttribute("aria-hidden");
         shell.classList.add("intro-revealed");
-        if (introReturnsToRoleChooser) {
-          showRoleChooser();
-        } else {
-          const focusTarget = introReturnFocus instanceof HTMLElement && document.contains(introReturnFocus)
-            ? introReturnFocus
-            : $("replayIntro");
-          window.setTimeout(() => focusTarget?.focus(), 0);
-        }
+        showWelcome();
         window.setTimeout(() => shell.classList.remove("intro-revealed"), 800);
       };
 
@@ -1976,6 +1956,7 @@
       shell.setAttribute("aria-hidden", "true");
       document.body.classList.add("intro-active");
       window.requestAnimationFrame(() => intro.classList.add("is-ready"));
+      beginIntroPlayback();
       window.setTimeout(() => {
         if (!intro.hidden && !introExitStarted) $("enterExperience")?.focus();
       }, 1150);
@@ -1985,14 +1966,6 @@
       const intro = $("introOverlay");
       const shell = $("siteShell");
       if (!intro || !shell) return;
-
-      if (hasSeenIntro()) {
-        intro.hidden = true;
-        shell.inert = false;
-        shell.removeAttribute("aria-hidden");
-        showRoleChooser();
-        return;
-      }
 
       startIntro(true);
     }
@@ -2045,7 +2018,7 @@
     }
 
     function getInteractiveApplicant() {
-      if (!applicantQuizComplete || !applicantLaunched) return null;
+      if (!applicantQuizComplete || !applicantLaunched || !profileWithinLimits()) return null;
       const name = safeText($("profileNameInput").value) || "Your name";
       const skills = $("profileSkillsInput").value.split(",").map(skill => safeText(skill)).filter(Boolean);
       const values = $("profileValuesInput").value.split(",").map(value => safeText(value)).filter(Boolean);
@@ -2060,6 +2033,7 @@
         experience: safeText($("profileExperienceInput").value),
         education: safeText($("profileEducationInput").value),
         credentials: safeText($("profileCredentialsInput").value),
+        featuredRoles: featuredRoles.map(role => ({ ...role })),
         mission: safeText($("profileMissionInput").value),
         values,
         wellbeing: safeText($("profileWellbeingInput").value),
@@ -2067,6 +2041,7 @@
         communityImpact: safeText($("profileCommunityInput").value),
         imageUrl: profileImageUrl,
         attachmentName: profileAttachmentName,
+        resumeFile: savedResumeFile,
         posts: projectPosts.slice()
       };
     }
@@ -2107,6 +2082,7 @@
     }
 
     function showApplicantPage(page, focusHeading = false) {
+      hideForwardPages();
       activeApplicantPage = page;
       $("applicantWorkspace").hidden = page !== "builder";
       $("applicantLivePage").hidden = page !== "hub";
@@ -2121,6 +2097,7 @@
         if (focusHeading) window.setTimeout(() => $("communityPageTitle").focus(), 0);
       }
       if (page === "builder") renderApplicantPrivacyStatus();
+      setNavigation(page === 'community' ? 'discover' : 'profile');
     }
 
     function isLaunchReady() {
@@ -2132,15 +2109,17 @@
     }
 
     function launchApplicantProfile() {
+      if (!validateProfileForLaunch()) return;
+      if (!applicantQuizComplete) {
+        showApplicantPage('builder');
+        showBuilderStep(3);
+        openApplicantQuiz();
+        showToast('Choose your work preferences before launching. Differences never disqualify you.');
+        return;
+      }
       if (!isLaunchReady()) {
         showApplicantPage("builder");
-        document.querySelectorAll(".method-tab").forEach(tab => {
-          const isForm = tab.dataset.method === "form";
-          tab.classList.toggle("active", isForm);
-          tab.setAttribute("aria-selected", String(isForm));
-        });
-        $("uploadPane").hidden = true;
-        $("formPane").hidden = false;
+        showProfileForm(0);
         showToast("Add your name, role title, and short introduction before launching.");
         $("profileNameInput").focus();
         return;
@@ -2171,22 +2150,7 @@
       $("hiringWorkspace").hidden = true;
       setHeroForRole(role);
 
-      if (role === "applicant") {
-        if (applicantQuizComplete) {
-          showApplicantPage(applicantLaunched ? activeApplicantPage : "builder");
-          showToast(applicantLaunched ? "Your local public presence is ready." : "Applicant workspace ready. Your matching preferences stay private.");
-        } else {
-          openApplicantQuiz();
-        }
-      } else if (hiringQuizComplete) {
-        $("hiringWorkspace").hidden = false;
-        rankRemainingApplicants();
-        renderApplicantCard();
-        renderRoleBrief();
-        showToast("Hiring dashboard ready. Recommendations use your private role brief.");
-      } else {
-        openHiringQuiz();
-      }
+      navigateForward('home');
     }
 
     function openApplicantQuiz() {
@@ -2307,13 +2271,15 @@
     function renderApplicantCard() {
       const person = currentApplicant();
       if (!person) {
-        $("reviewCard").innerHTML = '<div class="profile-top"><div class="candidate-avatar">✓</div><div><h3>You are all caught up.</h3><p class="role">All sample applicants have been reviewed.</p></div></div>';
+        $("reviewCard").dataset.empty = 'true';
         $("reviewCount").textContent = "Review complete";
         $("hiringDiscussion").replaceChildren();
         $("fitScore").textContent = "—";
         $("fitNote").textContent = "Everyone has been reviewed. No applicant was automatically excluded by their preferences.";
         return;
       }
+      $("reviewCard").dataset.empty = 'false';
+      if (!isAdvancing) { $("passButton").disabled = false; $("yesButton").disabled = false; }
       const experience = getMatchingProfile(person).experience;
       renderAvatar("appAvatar", "appProfileImage", "appInitials", person.name, person.imageUrl);
       $("appName").textContent = person.name;
@@ -2328,6 +2294,7 @@
       }));
       renderPublicStory("app", person);
       renderCareer("appCareer", person);
+      renderResumeDownload('appResume', person);
       $("profileScore").textContent = person.id === "avery" ? "Demo experience baseline" : experienceLabels[experience];
       $("fitScore").textContent = experienceLabels[experience];
       $("fitNote").textContent = "Role brief: " + experienceLabels[hiringCriteria.experience] + ". Review order uses experience only; working preferences never lower it." + (person.id === "avery" ? " Applicant-built profiles use a mid-level demo baseline." : "");
@@ -2358,11 +2325,11 @@
     function renderYesList() {
       const host = $("yesList");
       host.replaceChildren();
-      const connected = Object.values(connections).filter(connection => connection.fromHiring);
+      const connected = Object.values(connections).filter(connection => connection.fromHiring && (activeRole !== 'applicant' || connection.person.id === 'avery'));
       if (!connected.length) {
         const empty = document.createElement("p");
         empty.className = "empty";
-        empty.textContent = "Tap the right arrow to add an applicant and create a local connection.";
+        empty.textContent = activeRole === 'applicant' ? "Interest from a hiring team will appear here when you try the employer demo with your launched profile." : "Choose Connect while reviewing an applicant to start a local conversation.";
         host.append(empty);
         return;
       }
@@ -2372,8 +2339,8 @@
         const copy = document.createElement("div");
         const title = document.createElement("strong");
         const sub = document.createElement("span");
-        title.textContent = connection.person.name + " · Interested";
-        sub.textContent = "In-app interest notification ready for " + connection.person.role + ".";
+        title.textContent = activeRole === 'applicant' ? "Hiring team · Interested in your story" : connection.person.name + " · Interested";
+        sub.textContent = activeRole === 'applicant' ? "Continue the conversation in this browser demo." : "In-app interest notification ready for " + connection.person.role + ".";
         copy.append(title, sub);
         const button = document.createElement("button");
         button.className = "chat-small";
@@ -2387,20 +2354,21 @@
     function renderFeedback() {
       const host = $("feedbackList");
       host.replaceChildren();
-      if (!feedback.length) {
+      const visibleFeedback = activeRole === 'applicant' ? feedback.filter(item => item.shared && item.person.id === 'avery') : feedback;
+      if (!visibleFeedback.length) {
         const empty = document.createElement("p");
         empty.className = "empty";
-        empty.textContent = "When you pass, add a structured reason to improve future recommendations.";
+        empty.textContent = activeRole === 'applicant' ? "Notes appear here only when a hiring team chooses to share feedback with you." : "Choose Not now while reviewing an applicant to leave thoughtful feedback.";
         host.append(empty);
         return;
       }
-      feedback.forEach(item => {
+      visibleFeedback.forEach(item => {
         const row = document.createElement("div");
         row.className = "list-item";
         const copy = document.createElement("div");
         const title = document.createElement("strong");
         const sub = document.createElement("span");
-        title.textContent = item.person.name;
+        title.textContent = activeRole === 'applicant' ? item.reviewer || 'Hiring team' : item.person.name;
         sub.textContent = item.reason + (item.note ? " — " + item.note : "");
         copy.append(title, sub);
         row.append(copy);
@@ -2603,6 +2571,7 @@
       const person = currentApplicant();
       if (!person || activeRole !== "hiring") return;
       $("feedbackName").textContent = person.name;
+      renderResumeDownload('feedbackResume', person);
       $("feedbackModal").hidden = false;
       $("feedbackReason").focus();
     }
@@ -2622,6 +2591,7 @@
       }));
       renderPublicStory("detail", person);
       renderCareer("detailCareer", person);
+      renderResumeDownload('detailResume', person);
       $("profileModal").hidden = false;
       $("closeProfile").focus();
     }
@@ -2649,12 +2619,12 @@
     function openChat(personId) {
       let connection = connections[personId];
       if (!connection) {
-        const sample = {
+        const sample = getInteractiveApplicant() || {
           id: "avery",
-          name: "Avery Johnson",
-          initials: "AJ",
-          role: "Product Designer",
-          location: "Philadelphia, PA",
+          name: safeText($("profileNameInput").value) || "Your profile",
+          initials: initials($("profileNameInput").value),
+          role: safeText($("profileRoleInput").value) || "Applicant",
+          location: safeText($("profileLocationInput").value),
           summary: "Candidate profile preview",
           skills: []
         };
@@ -2730,7 +2700,7 @@
       }));
       renderAttachment("previewAttachment", "previewAttachmentText", profileAttachmentName);
       renderPublicStory("preview", publicStory);
-      renderCareer("previewCareer", readProfileFields());
+      renderCareer("previewCareer", { ...readProfileFields(), featuredRoles });
       syncInteractiveApplicant();
     }
 
@@ -2766,6 +2736,7 @@
       $("applicantQuizModal").hidden = true;
       if (activeRole === "applicant") {
         showApplicantPage("builder");
+        showBuilderStep(4);
         showToast("Private matching profile saved. Your public builder is ready.");
       }
     });
@@ -2782,6 +2753,8 @@
       $("hiringQuizModal").hidden = true;
       rankRemainingApplicants();
       if (activeRole === "hiring") {
+        hideForwardPages();
+        setNavigation('discover');
         $("hiringWorkspace").hidden = false;
         renderApplicantCard();
         renderRoleBrief();
@@ -2905,12 +2878,14 @@
     window.addEventListener("beforeunload", () => {
       if (resumeUrl) URL.revokeObjectURL(resumeUrl);
       if (profileImageUrl) URL.revokeObjectURL(profileImageUrl);
+      resumeDownloadUrls.forEach(url => URL.revokeObjectURL(url));
       projectPosts.forEach(post => {
         if (post.imageUrl) URL.revokeObjectURL(post.imageUrl);
       });
     });
 
   </script>
+  <script src="forward-ui.js"></script>
   <script src="profile-controller.js"></script>
 </body>
 </html>
