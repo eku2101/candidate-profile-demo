@@ -925,6 +925,10 @@ async function showSharedApplicant(id){
   api.recordProfileView(id).catch(()=>{});
 }
 
+function feedbackReadKey(){
+  return 'forward-feedback-read:'+user.id;
+}
+
 async function renderFeedback(){
   const epoch=sessionEpoch;
   heading('HIRING UPDATES','Feedback','Read private feedback and role updates from hiring teams.');
@@ -941,6 +945,11 @@ async function renderFeedback(){
     try{
       const rows=await api.feedback(before);
       if(epoch!==sessionEpoch||route!=='feedback'||!list.isConnected)return;
+      if(before===undefined&&rows.length){
+        const key=feedbackReadKey();
+        const lastRead=Number(sessionStorage.getItem(key))||0;
+        sessionStorage.setItem(key,String(Math.max(lastRead,rows[0].id)));
+      }
       info.textContent=rows.length||before!==undefined?'':'No updates yet. Hiring feedback and role closures will appear here.';
       for(const row of rows){
         const card=node('article',undefined,'panel');
@@ -969,19 +978,23 @@ async function renderFeedback(){
 function watchFeedback(){
   if(account.role!=='applicant')return;
   const epoch=sessionEpoch;
-  let latest;
+  let latest=Number(sessionStorage.getItem(feedbackReadKey()))||0;
+  let subscribed=false;
+  let lastCheck=0;
   const showUpdate=()=>{
     if(epoch!==sessionEpoch)return;
     if(route==='feedback')void renderFeedback();
     else $('feedbackNotice').hidden=false;
   };
   const checkLatest=async()=>{
-    if(epoch!==sessionEpoch||document.hidden)return;
+    if(epoch!==sessionEpoch)return;
+    lastCheck=Date.now();
     try{
       const [row]=await api.feedback(undefined,1);
       if(epoch!==sessionEpoch)return;
       const id=row?.id||0;
-      if(latest!==undefined&&id>latest)showUpdate();
+      const lastRead=Number(sessionStorage.getItem(feedbackReadKey()))||0;
+      if(id>Math.max(latest,lastRead))showUpdate();
       latest=Math.max(latest||0,id);
     }catch{/* The inbox exposes retry when opened. */}
   };
@@ -990,13 +1003,19 @@ function watchFeedback(){
   },({new:row})=>{
     latest=Math.max(latest||0,row.id);
     showUpdate();
-  }).subscribe(state=>{if(state==='SUBSCRIBED')void checkLatest();});
-  document.addEventListener('visibilitychange',checkLatest);
-  const fallback=setInterval(checkLatest,20000);
+  }).subscribe(state=>{
+    subscribed=state==='SUBSCRIBED';
+    if(subscribed)void checkLatest();
+  });
+  const onVisibility=()=>{if(!document.hidden)void checkLatest();};
+  document.addEventListener('visibilitychange',onVisibility);
+  const fallback=setInterval(()=>{
+    if(!document.hidden&&(!subscribed||Date.now()-lastCheck>=20000))void checkLatest();
+  },5000);
   void checkLatest();
   stopFeedback=()=>{
     clearInterval(fallback);
-    document.removeEventListener('visibilitychange',checkLatest);
+    document.removeEventListener('visibilitychange',onVisibility);
     void client.removeChannel(channel);
     $('feedbackNotice').hidden=true;
   };
