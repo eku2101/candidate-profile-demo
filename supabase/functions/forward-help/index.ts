@@ -7,7 +7,7 @@ const service=createClient(url,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,option
 
 Deno.serve(createHelpHandler({
   origin:Deno.env.get('FORWARD_ORIGIN')||'https://eku2101.github.io',
-  key:Deno.env.get('FORWARD_OPENAI_API_KEY'),
+  key:Deno.env.get('FORWARD_AI_ENABLED')==='true'?Deno.env.get('FORWARD_OPENAI_API_KEY'):undefined,
   model:Deno.env.get('FORWARD_OPENAI_MODEL')||'gpt-5.6-terra',
   async identify(authorization:string){
     const client=createClient(url,Deno.env.get('SUPABASE_ANON_KEY')!,{...options,global:{headers:{Authorization:authorization}}});

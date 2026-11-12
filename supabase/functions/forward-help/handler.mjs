@@ -54,11 +54,20 @@ export function createHelpHandler({origin,key,model,identify,takeRequest,request
         }),
         signal:AbortSignal.timeout(12000)
       });
-      if(!response.ok)return json(503,{answer:null});
+      if(!response.ok){
+        const detail=await response.json().catch(()=>null);
+        const code=detail?.error?.code;
+        console.warn('Vera provider rejected request', response.status,
+          typeof code==='string'&&/^[a-z_0-9]{1,64}$/i.test(code)?code:'unknown');
+        return json(503,{answer:null});
+      }
       const data=await response.json();
       const answer=data.output?.filter(item=>item.type==='message').flatMap(item=>item.content||[])
         .filter(item=>item.type==='output_text'&&typeof item.text==='string').map(item=>item.text).join('\n').trim();
       return answer?json(200,{answer}):json(503,{answer:null});
-    }catch{return json(503,{answer:null});}
+    }catch(error){
+      console.warn('Vera request failed', error?.name==='TimeoutError'?'timeout':'unexpected');
+      return json(503,{answer:null});
+    }
   };
 }
