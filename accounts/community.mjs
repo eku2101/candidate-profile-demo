@@ -8,6 +8,7 @@ const extensions={
 const maxFileSize=6*1024*1024;
 const slideDuration=4000;
 const videoExtensions=new Set(['mp4','webm']);
+let engagementChannelCleanup=Promise.resolve();
 
 function element(tag,text,className){
   const item=document.createElement(tag);
@@ -276,6 +277,11 @@ export function mountCommunity({host,api,authorId,authorName,dialog,dialogElemen
   let active=true;
   let renderVersion=0;
   let mineOnly=false;
+  const engagementControls=new Map();
+  let openCommentThread;
+  let checkingEngagement=false;
+  let checkEngagementAgain=false;
+  let engagementChannel;
   const observer=new IntersectionObserver(entries=>{
     for(const entry of entries){
       if(!entry.isIntersecting)continue;
@@ -293,6 +299,118 @@ export function mountCommunity({host,api,authorId,authorName,dialog,dialogElemen
   mine.setAttribute('aria-pressed','false');
   actions.append(button('Create a post',()=>openComposer(context),'primary'),mine,button('Refresh feed',()=>void reload()));
   host.replaceChildren(actions,feedStatus,drafts,feed);
+
+  async function refreshEngagement(){
+    if(!active||!engagementControls.size)return;
+    if(checkingEngagement){
+      checkEngagementAgain=true;
+      return;
+    }
+    checkingEngagement=true;
+    const version=renderVersion;
+    try{
+      const rows=await api.communityEngagement([...engagementControls.keys()]);
+      if(!active||version!==renderVersion)return;
+      for(const row of rows)engagementControls.get(row.post_id)?.(row);
+    }catch{/* Reconnect, the next update, or Refresh feed can retry. */}
+    finally{
+      checkingEngagement=false;
+      if(checkEngagementAgain){
+        checkEngagementAgain=false;
+        void refreshEngagement();
+      }
+    }
+  }
+
+  function refreshSocialActivity(){
+    void refreshEngagement();
+    void openCommentThread?.();
+  }
+
+  function openComments(post){
+    dialog('Comments on '+post.author_name+'’s post',body=>{
+      const list=element('ol',undefined,'community-comments');
+      const message=element('p','Loading comments…','help');
+      message.setAttribute('role','status');
+      const form=element('form',undefined,'community-comment-form');
+      const name=field(form,'Display name','communityCommentName');
+      name.maxLength=80;
+      name.required=true;
+      name.value=authorName?.trim()||'Forward member';
+      const input=field(form,'Add a comment','communityCommentBody','textarea');
+      input.maxLength=1000;
+      input.required=true;
+      input.rows=3;
+      const submit=element('button','Post comment','button primary');
+      submit.type='submit';
+      form.append(element('p','Signed-in Forward members can see your comment.','help'),submit);
+      body.append(message,list,form);
+      let request=0;
+      let previousCommentIds;
+
+      async function refreshComments(){
+        const version=++request;
+        try{
+          const rows=await api.communityComments(post.id);
+          if(!dialogElement.open||!list.isConnected||version!==request)return;
+          message.textContent=rows.length===0?'No comments yet.':rows.length===50?'Showing the latest 50 comments.':'';
+          const ids=rows.map(row=>row.id).join(',');
+          if(ids===previousCommentIds)return;
+          previousCommentIds=ids;
+          list.replaceChildren(...rows.slice().reverse().map(comment=>{
+            const item=element('li',undefined,'community-comment');
+            const meta=element('p',undefined,'community-comment-meta');
+            const time=element('time',new Date(comment.created_at).toLocaleString(),'help');
+            time.dateTime=comment.created_at;
+            meta.append(element('strong',comment.author_name),time);
+            item.append(meta,element('p',comment.body,'profile-text'));
+            return item;
+          }));
+        }catch{
+          if(list.isConnected&&version===request)message.textContent='Comments couldn’t load. Open the post again to retry.';
+        }
+      }
+
+      form.addEventListener('submit',event=>{
+        event.preventDefault();
+        run(submit,async()=>{
+          const author=name.value.trim();
+          const text=input.value.trim();
+          if(!author||!text)throw new Error('Enter a display name and a comment.');
+          await api.addCommunityComment(post.id,author,text);
+          if(input.value.trim()===text)input.value='';
+          await Promise.all([refreshComments(),refreshEngagement()]);
+        });
+      });
+      openCommentThread=refreshComments;
+      dialogElement.addEventListener('close',()=>{
+        if(openCommentThread===refreshComments)openCommentThread=undefined;
+      },{once:true});
+      queueMicrotask(()=>void refreshComments());
+    });
+  }
+
+  function postEngagement(post){
+    const controls=element('div',undefined,'community-engagement');
+    let liked=false;
+    const like=button('Like',()=>run(like,async()=>{
+      await api.setCommunityLike(post.id,!liked);
+      await refreshEngagement();
+    }));
+    const comments=button('Comments',()=>openComments(post));
+    like.disabled=true;
+    like.setAttribute('aria-pressed','false');
+    engagementControls.set(post.id,row=>{
+      liked=row.liked;
+      like.disabled=false;
+      like.textContent=(liked?'♥ Liked':'♡ Like')+' · '+row.like_count;
+      like.setAttribute('aria-label',`${liked?'Unlike':'Like'} post · ${row.like_count} ${row.like_count===1?'like':'likes'}`);
+      like.setAttribute('aria-pressed',String(liked));
+      comments.textContent='Comments · '+row.comment_count;
+    });
+    controls.append(like,comments);
+    return controls;
+  }
 
   function deletePost(post){
     dialog(post.published_at?'Remove this community post?':'Discard this incomplete upload?',body=>{
@@ -348,6 +466,7 @@ export function mountCommunity({host,api,authorId,authorName,dialog,dialogElemen
       observer.observe(cover);
     }
     card.append(byline,cover,element('p',post.caption,'profile-text community-caption'));
+    if(!post.example)card.append(postEngagement(post));
     if(post.author_id===authorId)card.append(button('Remove post',()=>deletePost(post)));
     return card;
   }
@@ -369,6 +488,7 @@ export function mountCommunity({host,api,authorId,authorName,dialog,dialogElemen
     for(const url of thumbnailURLs)URL.revokeObjectURL(url);
     thumbnailURLs.clear();
     drafts.replaceChildren();
+    engagementControls.clear();
     if(incomplete.length){
       const section=element('details',undefined,'panel');
       section.append(element('summary','Incomplete uploads'));
@@ -379,11 +499,24 @@ export function mountCommunity({host,api,authorId,authorName,dialog,dialogElemen
     }
     const visiblePosts=mineOnly?posts:posts.concat(examplePosts());
     feed.replaceChildren(...visiblePosts.map(post=>renderPost(post,version)));
+    void refreshEngagement();
     if(!visiblePosts.length&&!feedStatus.textContent)feedStatus.textContent='You haven’t published a community post yet.';
   }
+  const onVisible=()=>{if(!document.hidden)refreshSocialActivity();};
+  document.addEventListener('visibilitychange',onVisible);
+  const timer=setInterval(onVisible,10000);
+  void engagementChannelCleanup.then(()=>api.client.realtime.setAuth()).then(()=>{
+    if(!active)return;
+    engagementChannel=api.client.channel('forward-community-engagement',{config:{private:true}})
+      .on('broadcast',{event:'engagement-changed'},refreshSocialActivity)
+      .subscribe(state=>{if(state==='SUBSCRIBED')refreshSocialActivity();});
+  }).catch(()=>{});
   void reload();
   return ()=>{
     active=false;
+    clearInterval(timer);
+    document.removeEventListener('visibilitychange',onVisible);
+    if(engagementChannel)engagementChannelCleanup=api.client.removeChannel(engagementChannel).catch(()=>{});
     observer.disconnect();
     for(const url of thumbnailURLs)URL.revokeObjectURL(url);
   };

@@ -1,8 +1,8 @@
 import {accountConfig} from './config.js?v=public-signup-1';
 import '../demo-applicants.js?v=expert-demo-1';
 import {configReady,applicantFields,hiringBackgroundFields,hiringResumeFields,questions,questionLabels,normalizeApplicant,normalizeImages,applicantIssues,importReviewedFields,wordCount,discussionPrompts} from './model.mjs?v=hiring-resume-1';
-import {createAccountAPI} from './api.mjs?v=community-feed-1';
-import {mountCommunity} from './community.mjs?v=community-feed-1';
+import {createAccountAPI} from './api.mjs?v=community-engagement-1';
+import {mountCommunity} from './community.mjs?v=community-engagement-1';
 import {validateAuthInput,submitAuthentication,authErrorMessage,newPasswordError} from './auth-flow.mjs?v=public-signup-1';
 import {installHelpChat} from './help-chat.mjs?v=vera-portrait-1';
 const $=id=>document.getElementById(id);
