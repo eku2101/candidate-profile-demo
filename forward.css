@@ -38,7 +38,7 @@ button:disabled { cursor:default; opacity:.48; }
 .home-visual { position:relative; min-height:400px; }
 .visual-orbit { position:absolute; border:1px solid #aa95dd50; border-radius:50%; width:330px; height:330px; top:50%; left:50%; transform:translate(-50%,-50%) rotate(-20deg); }
 .orbit-two { width:460px; height:220px; transform:translate(-50%,-50%) rotate(-48deg); }
-.forward-mark { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%) rotate(-7deg); width:150px; height:150px; border-radius:35px; box-shadow:0 22px 42px #4b248b40; }
+.forward-mark { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:150px; height:150px; border-radius:35px; box-shadow:0 22px 42px #4b248b40; }
 .story-token { position:absolute; padding:17px 20px; background:#ffffffed; border:1px solid #fff; border-radius:13px; box-shadow:0 8px 32px #36245209; font-size:.88rem; font-weight:650; z-index:1; white-space:nowrap; }
 .story-token span { display:block; color:var(--ink-soft); font-size:.56rem; letter-spacing:.12em; margin-top:6px; }
 .token-work { top:45px; left:3%; transform:rotate(-5deg); }
