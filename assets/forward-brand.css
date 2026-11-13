@@ -1,0 +1,30 @@
+:root {
+  --forward-black: #171321;
+  --forward-muted: #5e566d;
+  --forward-purple: #602ca8;
+  --forward-violet: #783ed0;
+  --forward-lavender: #f3ecff;
+  --forward-line: #e3daef;
+}
+
+.brand.forward-brand {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+  color: var(--forward-black);
+  font: 700 clamp(1.35rem, 2.5vw, 1.85rem)/1 system-ui, sans-serif;
+  letter-spacing: -.065em;
+  text-decoration: none;
+}
+
+.forward-brand-icon {
+  display: block;
+  width: 36px;
+  height: 36px;
+  flex: none;
+}
+
+@media (max-width: 620px) {
+  .forward-brand-icon { width: 32px; height: 32px; }
+}

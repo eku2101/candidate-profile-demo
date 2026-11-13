@@ -1,5 +1,5 @@
 /* A quieter, consistent application shell for Forward. */
-:root { --ink:#252334; --ink-soft:#656373; --paper:#f5f5f8; --accent:#7055d7; --accent-deep:#5536b7; --accent-wash:#efebfc; --line:#e4e2eb; --shadow:0 5px 24px #27203f06; }
+:root { --ink:var(--forward-black); --ink-soft:var(--forward-muted); --paper:#faf8fd; --accent:var(--forward-purple); --accent-deep:#4b248b; --accent-wash:var(--forward-lavender); --line:var(--forward-line); --shadow:0 5px 24px #27203f08; }
 html { scroll-padding-top:110px; }
 body { line-height:1.55; }
 h1,h2,h3,h4 { font-family:var(--sans); letter-spacing:-.035em; line-height:1.18; }
@@ -30,7 +30,7 @@ button:disabled { cursor:default; opacity:.48; }
 .workspace-head h2,.page-heading h1 { font-size:clamp(1.65rem,3vw,2.4rem); margin:8px 0; }
 .page-heading { margin-bottom:28px; max-width:760px; }
 .page-heading p { color:var(--ink-soft); }
-.home-feature { display:grid; grid-template-columns:1.1fr .9fr; gap:30px; overflow:hidden; min-height:430px; background:#eeebf6; border:1px solid #e6e0f2; border-radius:24px; }
+.home-feature { display:grid; grid-template-columns:1.1fr .9fr; gap:30px; overflow:hidden; min-height:430px; background:linear-gradient(120deg,#fff 15%,#f3ecff 65%,#e9d8ff); border:1px solid var(--line); border-radius:24px; }
 .home-feature-copy { padding:54px 0 52px 48px; z-index:1; }
 .home-feature h1 { font-size:clamp(2.4rem,5vw,4.2rem); font-weight:650; max-width:620px; margin:18px 0 22px; line-height:1.05; }
 .home-feature-copy > p:not(.eyebrow) { font-size:1.12rem; color:var(--ink-soft); }
@@ -38,8 +38,7 @@ button:disabled { cursor:default; opacity:.48; }
 .home-visual { position:relative; min-height:400px; }
 .visual-orbit { position:absolute; border:1px solid #aa95dd50; border-radius:50%; width:330px; height:330px; top:50%; left:50%; transform:translate(-50%,-50%) rotate(-20deg); }
 .orbit-two { width:460px; height:220px; transform:translate(-50%,-50%) rotate(-48deg); }
-.forward-mark { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%) rotate(-7deg); width:130px; height:150px; border-radius:28px; background:linear-gradient(140deg,#8c74e5,#5434a8); box-shadow:0 18px 36px #654bb533; color:white; font-family:var(--serif); font-size:7rem; text-align:center; line-height:1.2; }
-.forward-mark span { font-family:var(--sans); font-size:2rem; position:absolute; top:17px; right:16px; }
+.forward-mark { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%) rotate(-7deg); width:150px; height:150px; border-radius:35px; box-shadow:0 22px 42px #4b248b40; }
 .story-token { position:absolute; padding:17px 20px; background:#ffffffed; border:1px solid #fff; border-radius:13px; box-shadow:0 8px 32px #36245209; font-size:.88rem; font-weight:650; z-index:1; white-space:nowrap; }
 .story-token span { display:block; color:var(--ink-soft); font-size:.56rem; letter-spacing:.12em; margin-top:6px; }
 .token-work { top:45px; left:3%; transform:rotate(-5deg); }
@@ -241,6 +240,7 @@ body.onboarding-active { overflow:hidden; }
 #forwardConnections .lists { margin-top:0; }
 .intro-overlay { z-index:3000; background:radial-gradient(ellipse at 70% 45%,#50358b 0%,#241d3a 45%,#171320 100%); }
 .intro-title { font-family:var(--serif); font-size:clamp(5rem,15vw,10rem); }
+.intro-brand-mark { display:block; width:clamp(48px,9vw,76px); height:auto; margin:16px auto 4px; border-radius:24%; box-shadow:0 0 48px #a971ff66; }
 .intro-copy { max-width:500px; margin:36px auto 30px; }
 .intro-pause { display:block; margin:18px auto 0; color:#c6bbdd; font-size:.72rem; }
 .intro-paused * { animation-play-state:paused !important; }
@@ -339,7 +339,7 @@ body.welcome-active { overflow:hidden; }
   .token-work { top:15px; left:10%; }
   .token-care { top:115px; right:6%; }
   .token-why { bottom:12px; left:10%; }
-  .forward-mark { width:100px; height:120px; font-size:5.7rem; }
+  .forward-mark { width:108px; height:108px; border-radius:25px; }
   .home-bottom,.team-grid,.hiring-grid,.lists,.applicant-hub-grid { grid-template-columns:1fr; }
   .home-progress-card { grid-column:auto; }
   .match-panel { position:static; }
