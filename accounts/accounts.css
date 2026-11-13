@@ -115,6 +115,18 @@
 .community-comment p { margin: 0; }
 .community-comment .community-comment-meta { display: flex; flex-wrap: wrap; gap: 5px 12px; margin-bottom: 4px; color: var(--ink); }
 .community-comment-form { border-top: 1px solid var(--line); padding-top: 10px; }
+:root {
+  --paper: #faf8fd;
+  --ink: var(--forward-black);
+  --muted: var(--forward-muted);
+  --accent: var(--forward-purple);
+  --pale: var(--forward-lavender);
+  --line: var(--forward-line);
+}
+.auth-card, .community-post { box-shadow: 0 8px 24px #391f610b; }
+.auth-story .tagline { border-left: 3px solid var(--forward-violet); padding-left: 14px; }
+.community-byline .fake-label { color: var(--forward-purple); }
+.site-header #accountNav { flex-wrap: wrap; }
 .community-gallery-stage {
   display: grid;
   place-items: center;
