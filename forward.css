@@ -239,7 +239,7 @@ body.onboarding-active { overflow:hidden; }
 #reviewCard[data-empty=true] .review-complete { display:block; }
 #forwardConnections .lists { margin-top:0; }
 .intro-overlay { z-index:3000; background:radial-gradient(ellipse at 70% 45%,#50358b 0%,#241d3a 45%,#171320 100%); }
-.intro-brand-mark { display:block; width:clamp(48px,9vw,76px); height:auto; margin:16px auto 4px; border-radius:24%; box-shadow:0 0 48px #a971ff66; }
+.intro-brand-mark { display:block; width:clamp(72px,21vw,120px); height:auto; margin:16px auto 4px; border-radius:24%; box-shadow:0 0 48px #a971ff66; }
 .intro-copy { max-width:500px; margin:36px auto 30px; }
 .intro-pause { display:block; margin:18px auto 0; color:#c6bbdd; font-size:.72rem; }
 .intro-paused * { animation-play-state:paused !important; }
@@ -257,14 +257,14 @@ body.onboarding-active { overflow:hidden; }
 @media (max-height:580px) {
   .intro-title { font-size:clamp(2.5rem, min(15vw, 16vh), 10rem); }
   .intro-kicker { margin-bottom:8px; }
-  .intro-brand-mark { width:48px; margin-top:8px; }
+  .intro-brand-mark { width:66px; margin-top:8px; }
   .intro-copy { margin:10px auto 6px; line-height:1.35; }
   .intro-stages { height:20px; margin:4px 0 8px; font-size:.9rem; }
 }
 @media (max-height:440px) {
   .intro-top { margin-bottom:8px; }
   .intro-title { font-size:clamp(2rem, min(15vw, 13vh), 10rem); }
-  .intro-brand-mark { width:38px; }
+  .intro-brand-mark { width:52px; }
   .intro-copy { font-size:.9rem; }
   .intro-enter { min-height:36px; padding-block:4px; }
   .intro-pause { margin-top:4px; }
