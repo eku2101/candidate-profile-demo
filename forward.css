@@ -256,13 +256,12 @@ body.onboarding-active { overflow:hidden; }
 }
 @media (max-height:580px) {
   .intro-title { font-size:clamp(2.5rem, min(15vw, 16vh), 10rem); }
-  .intro-kicker { margin-bottom:8px; }
   .intro-brand-mark { width:60px; }
   .intro-copy { margin:10px auto 6px; line-height:1.35; }
   .intro-stages { height:20px; margin:4px 0 8px; font-size:.9rem; }
 }
 @media (max-height:440px) {
-  .intro-top { margin-bottom:8px; }
+  .intro-top { gap:12px; margin-bottom:5px; }
   .intro-title { font-size:clamp(2rem, min(15vw, 13vh), 10rem); }
   .intro-brand-mark { width:48px; }
   .intro-copy { font-size:.9rem; }
