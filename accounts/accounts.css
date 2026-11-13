@@ -159,6 +159,26 @@
 .account-header-row .signed-email { max-width: none; }
 .account-header-row #accountIdentity .button,
 .account-header-row .forward-help-launch { min-height: 44px; padding: 8px 10px; }
+@media (min-width: 801px) {
+  .account-header-row {
+    gap: clamp(6px, .8vw, 12px);
+    padding-inline: clamp(10px, 1.2vw, 20px);
+    overflow-x: visible;
+  }
+  .account-header-row .brand.forward-brand {
+    gap: 7px;
+    font-size: clamp(1.25rem, 1.8vw, 1.65rem);
+  }
+  .account-header-row .forward-brand-icon { width: 32px; height: 32px; }
+  .account-header-row #accountNav { gap: 2px; }
+  .account-header-row #accountNav .button {
+    padding-inline: clamp(5px, .65vw, 9px);
+    font-size: clamp(.75rem, 1vw, .8rem);
+  }
+  .account-header-row #accountIdentity { flex: 0 1 auto; min-width: 0; gap: 6px; }
+  .account-header-row .signed-email { min-width: 0; }
+  .account-header-row #accountIdentity .button { flex: none; }
+}
 .community-gallery-stage {
   display: grid;
   place-items: center;

@@ -1387,6 +1387,7 @@ async function handleSession(session,event){
   $('accountIdentity').replaceChildren();$('accountNav').hidden=true;
   if(!user){draft=null;publication=null;files=[];shares=[];$('workspaceContent').replaceChildren();showPage('authPage');return;}
   const identity=node('span',user.email,'signed-email');
+  identity.title=user.email;
   const leave=async()=>{const result=await client.auth.signOut({scope:'local'});if(result.error)throw result.error;location.replace('accounts.html');};
   const signout=button('Sign out',async()=>{
     if(dirty){
