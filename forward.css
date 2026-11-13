@@ -239,7 +239,6 @@ body.onboarding-active { overflow:hidden; }
 #reviewCard[data-empty=true] .review-complete { display:block; }
 #forwardConnections .lists { margin-top:0; }
 .intro-overlay { z-index:3000; background:radial-gradient(ellipse at 70% 45%,#50358b 0%,#241d3a 45%,#171320 100%); }
-.intro-title { font-family:var(--serif); font-size:clamp(5rem,15vw,10rem); }
 .intro-brand-mark { display:block; width:clamp(48px,9vw,76px); height:auto; margin:16px auto 4px; border-radius:24%; box-shadow:0 0 48px #a971ff66; }
 .intro-copy { max-width:500px; margin:36px auto 30px; }
 .intro-pause { display:block; margin:18px auto 0; color:#c6bbdd; font-size:.72rem; }
