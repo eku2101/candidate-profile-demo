@@ -1,3 +1,7 @@
 [functions.resume]
 # The function validates the user's access token with Auth on every request.
 verify_jwt = false
+
+[functions.forward-jobs]
+# The function checks the user's access token and confirmed email before searching.
+verify_jwt = false
