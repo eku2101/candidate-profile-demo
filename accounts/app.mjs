@@ -5,6 +5,7 @@ import {createAccountAPI} from './api.mjs?v=example-reactions-1';
 import {mountCommunity} from './community.mjs?v=example-reactions-1';
 import {validateAuthInput,submitAuthentication,authErrorMessage,newPasswordError} from './auth-flow.mjs?v=public-signup-1';
 import {installHelpChat} from './help-chat.mjs?v=vera-portrait-1';
+import {mountJobs} from './jobs.mjs';
 const $=id=>document.getElementById(id);
 const node=(tag,text,className)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(className)e.className=className;return e;};
 const button=(text,fn,kind='secondary')=>{const e=node('button',text,'button '+kind);e.type='button';e.addEventListener('click',()=>run(e,fn));return e;};
@@ -213,6 +214,7 @@ async function navigate(next,connectionId){
   renderNav();
   if(next==='profile')renderEditor();
   else if(next==='discover')await renderDiscovery();
+  else if(next==='jobs')renderJobs();
   else if(next==='community')renderCommunity();
   else if(next==='messages')await renderMessages(connectionId);
   else if(next==='views')await renderProfileViews();
@@ -225,12 +227,31 @@ async function navigate(next,connectionId){
   window.scrollTo(0,0);
 }
 function renderNav(){
-  const items=account.role==='applicant'?[['profile','My profile'],['discover','Discover teams'],['sharing','Sharing']]:[['profile','My hiring profile'],['sharing','Applicants']];
+  const items=account.role==='applicant'?[['profile','My profile'],['discover','Discover teams'],['jobs','Jobs'],['sharing','Sharing']]:[['profile','My hiring profile'],['sharing','Applicants']];
   items.push(['messages','Messages']);
   items.push(['community','Community']);
   items.push(['views','Profile views']);
   if(account.role==='applicant')items.push(['feedback','Feedback']);
   $('accountNav').replaceChildren(...items.map(([id,label])=>{const b=button(label,()=>navigate(id));if(route===id)b.setAttribute('aria-current','page');return b;}));$('accountNav').hidden=false;
+}
+function renderJobs(){
+  heading('', 'Find open jobs', 'Search by role or skill and see where listings are based.');
+  mountJobs({
+    host:$('workspaceContent'),
+    skills:draft.fields.skills,
+    async search(filters,signal){
+      const {data:{session}}=await client.auth.getSession();
+      if(!session)throw new Error('Sign in again to search for jobs.');
+      const response=await fetch(new URL('/functions/v1/forward-jobs',accountConfig.supabaseUrl),{
+        method:'POST',signal,
+        headers:{'Content-Type':'application/json',apikey:accountConfig.publishableKey,Authorization:'Bearer '+session.access_token},
+        body:JSON.stringify(filters)
+      });
+      const data=await response.json();
+      if(!response.ok)throw new Error(data.error||'Job search is temporarily unavailable. Try again later.');
+      return data;
+    }
+  });
 }
 function renderCommunity(){
   heading('COMMUNITY','Your story. Your choice.','Share the work, people, and moments behind your profile.');
