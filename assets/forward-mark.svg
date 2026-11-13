@@ -19,5 +19,5 @@
     <circle cx="51" cy="14" r="2" fill="#bb95ff" fill-opacity=".8"/>
   </g>
   <circle cx="32" cy="21" r="11" fill="#fff"/>
-  <path fill="#fff" d="M10 54v-3c0-10 9-16 22-16s22 6 22 16v3z"/>
+  <path fill="#fff" d="M10 57v-6c0-10 9-16 22-16s22 6 22 16v6z"/>
 </svg>
